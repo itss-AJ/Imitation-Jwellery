@@ -27,9 +27,15 @@ export interface ProductFilters {
   limit?: number
 }
 
-// Helper function to parse price from string
+/**
+ * Helper function to parse price from string format (e.g., "Rs. 299.00")
+ * Extracts numeric value by removing non-numeric characters except decimal point
+ * @param priceStr - Price string in format "Rs. XXX.XX"
+ * @returns Numeric price value, or 0 if parsing fails
+ */
 const parsePrice = (priceStr: string): number => {
-  return parseFloat(priceStr.replace(/[^0-9.]/g, ""))
+  const parsed = parseFloat(priceStr.replace(/[^0-9.]/g, ""))
+  return isNaN(parsed) ? 0 : parsed
 }
 
 const mockProducts: Product[] = [
