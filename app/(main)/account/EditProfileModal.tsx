@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { Fragment, useState, useEffect } from "react"
+import { Fragment, useState, useEffect, useRef } from "react"
 import { Dialog, Transition } from "@headlessui/react"
 import { X } from "lucide-react"
 import CommonInput from "@/app/components/input/CommonInput"
@@ -17,28 +17,37 @@ type EditProfileModalProps = {
 export default function EditProfileModal({ open, onClose }: EditProfileModalProps) {
   const { data: userProfile } = useUserProfile()
   const updateProfile = useUpdateProfile()
+  
   const [formData, setFormData] = useState({
-    firstName: userProfile?.name?.split(" ")[0] || "",
-    lastName: userProfile?.name?.split(" ")[1] || "",
-    email: userProfile?.email || "",
+    firstName: "",
+    lastName: "",
+    email: "",
   })
+  
+  // Use ref to track if we should sync on next open
+  const shouldSyncRef = useRef(true)
 
-  // Update form data when userProfile changes
+  // Sync form data when modal opens
   useEffect(() => {
-    if (userProfile) {
-      const firstName = userProfile.name?.split(" ")[0] || ""
-      const lastName = userProfile.name?.split(" ")[1] || ""
-      const email = userProfile.email || ""
+    if (open && userProfile && shouldSyncRef.current) {
+      // Schedule the update for next render cycle to avoid cascading
+      const timeoutId = setTimeout(() => {
+        setFormData({
+          firstName: userProfile.name?.split(" ")[0] || "",
+          lastName: userProfile.name?.split(" ")[1] || "",
+          email: userProfile.email || "",
+        })
+      }, 0)
+      shouldSyncRef.current = false
       
-      // Only update if values have changed to avoid infinite loops
-      setFormData((prev) => {
-        if (prev.firstName !== firstName || prev.lastName !== lastName || prev.email !== email) {
-          return { firstName, lastName, email }
-        }
-        return prev
-      })
+      return () => clearTimeout(timeoutId)
     }
-  }, [userProfile])
+    
+    // Reset sync flag when modal closes
+    if (!open) {
+      shouldSyncRef.current = true
+    }
+  }, [open, userProfile])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
