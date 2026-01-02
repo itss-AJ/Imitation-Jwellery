@@ -6,6 +6,7 @@ import Image from "next/image";
 import { X } from "lucide-react";
 import CommonButton from "@/app/components/button/CommonButton";
 import Link from "next/link";
+import { useCart, useUpdateCartQuantity, useRemoveFromCart } from "@/hooks/use-cart";
 
 type CartDrawerProps = {
     open: boolean;
@@ -13,6 +14,14 @@ type CartDrawerProps = {
 };
 
 export default function CartDrawer({ open, onClose }: CartDrawerProps) {
+    const { data: cart } = useCart();
+    const updateQuantity = useUpdateCartQuantity();
+    const removeFromCart = useRemoveFromCart();
+
+    const cartItems = cart?.items || [];
+    const cartTotal = cart?.total || 0;
+    const cartCount = cartItems.length;
+
     return (
         <Transition appear show={open} as={Fragment}>
             <Dialog as="div" className="relative z-50" onClose={onClose}>
@@ -72,7 +81,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                                     {/* HEADER */}
                                     <div className="flex items-center justify-between mb-5">
                                         <h3 className="text-lg font-medium">
-                                            Cart <span className="ml-1 text-sm">(3)</span>
+                                            Cart <span className="ml-1 text-sm">({cartCount})</span>
                                         </h3>
                                         <button onClick={onClose}>
                                             <X />
@@ -81,35 +90,40 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
 
                                     {/* CART ITEMS */}
                                     <div className="flex-1 overflow-y-auto space-y-6">
-                                        <CartItem
-                                            title="Gold Plated Large Oval Shape Hoop Earring"
-                                            price="₹199.00"
-                                            image="/img/bracelet-img.webp"
-                                        />
-                                        <CartItem
-                                            title="Nail & Hoop Earring"
-                                            price="₹799.00"
-                                            image="/img/necklace.webp"
-                                        />
-                                        <CartItem
-                                            title="Gold Plated Drop Hoop Earring"
-                                            price="₹199.00"
-                                            image="/img/bracelets.webp"
-                                        />
+                                        {cartItems.length > 0 ? (
+                                            cartItems.map((item) => (
+                                                <CartItem
+                                                    key={item.id}
+                                                    id={item.id}
+                                                    title={item.name}
+                                                    price={item.price}
+                                                    image={item.image}
+                                                    quantity={item.quantity}
+                                                    onUpdateQuantity={(newQuantity) =>
+                                                        updateQuantity.mutate({ cartItemId: item.id, quantity: newQuantity })
+                                                    }
+                                                    onRemove={() => removeFromCart.mutate(item.id)}
+                                                />
+                                            ))
+                                        ) : (
+                                            <p className="text-sm text-foreground/60 text-center py-8">Your cart is empty</p>
+                                        )}
                                     </div>
 
                                     {/* FOOTER */}
                                     <div className="border-t border-foreground/20 pt-5 mt-5">
                                         <div className="flex justify-between mb-4">
                                             <span className="font-medium">Total:</span>
-                                            <span className="font-medium">₹1,197.00</span>
+                                            <span className="font-medium">₹{cartTotal.toFixed(2)}</span>
                                         </div>
 
                                         <p className="text-xs text-foreground/60 mb-4">
                                             Taxes and shipping calculated at checkout
                                         </p>
 
-                                        <CommonButton href="/checkout">CHECK OUT</CommonButton>
+                                        <CommonButton href="/checkout" disabled={cartItems.length === 0}>
+                                            CHECK OUT
+                                        </CommonButton>
 
                                         <Link href='/cart' className="mt-4 commonLink flex justify-center mx-auto">
                                             VIEW CART
@@ -152,13 +166,21 @@ function SuggestedProduct({
 }
 
 function CartItem({
+    id,
     title,
     price,
     image,
+    quantity,
+    onUpdateQuantity,
+    onRemove,
 }: {
+    id: string;
     title: string;
-    price: string;
+    price: number;
     image: string;
+    quantity: number;
+    onUpdateQuantity: (quantity: number) => void;
+    onRemove: () => void;
 }) {
     return (
         <div className="flex gap-4">
@@ -168,18 +190,28 @@ function CartItem({
 
             <div className="flex-1">
                 <p className="text-sm font-medium">{title}</p>
-                <p className="text-sm text-foreground/70">{price} x 1</p>
+                <p className="text-sm text-foreground/70">₹{price.toFixed(2)} x {quantity}</p>
 
                 <div className="flex items-center gap-3 mt-2">
                     <div className="flex items-center border border-foreground/20 rounded-full overflow-hidden">
-                        <button className="px-4 py-2 text-foreground">-</button>
-                        <span className="px-4 text-foreground">1</span>
-                        <button className="px-4 py-2 text-foreground">+</button>
+                        <button
+                            onClick={() => onUpdateQuantity(Math.max(1, quantity - 1))}
+                            className="px-4 py-2 text-foreground"
+                        >
+                            -
+                        </button>
+                        <span className="px-4 text-foreground">{quantity}</span>
+                        <button
+                            onClick={() => onUpdateQuantity(quantity + 1)}
+                            className="px-4 py-2 text-foreground"
+                        >
+                            +
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <button className="text-sm commonLink">
+            <button onClick={onRemove} className="text-sm commonLink">
                 Remove
             </button>
         </div>

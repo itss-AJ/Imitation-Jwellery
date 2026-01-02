@@ -5,8 +5,15 @@ import CommonHeading from "@/app/components/CommonHeading";
 import CommonInput from "@/app/components/input/CommonInput";
 import CommonButton from "@/app/components/button/CommonButton";
 import { CheckCircle } from "lucide-react";
+import { useCart } from "@/hooks/use-cart";
 
 export default function CheckoutPage() {
+    const { data: cart } = useCart();
+    const cartItems = cart?.items || [];
+    const subtotal = cart?.total || 0;
+    const shipping = 0;
+    const total = subtotal + shipping;
+
     return (
         <div className="checkoutPage gradientBg">
             <section className="px-3 md:px-8 lg:px-10 py-8 md:py-12">
@@ -121,21 +128,19 @@ export default function CheckoutPage() {
 
                             {/* CART ITEMS */}
                             <div className="space-y-4">
-                                <CartItem
-                                    title="Gold Plated Large Oval Shape Hoop Earring"
-                                    price="₹199.00"
-                                    image="/img/bracelet-img.webp"
-                                />
-                                <CartItem
-                                    title="Nail & Hoop Earring"
-                                    price="₹799.00"
-                                    image="/img/necklace.webp"
-                                />
-                                <CartItem
-                                    title="Gold Plated Drop Hoop Earring"
-                                    price="₹199.00"
-                                    image="/img/bracelets.webp"
-                                />
+                                {cartItems.length > 0 ? (
+                                    cartItems.map((item) => (
+                                        <CartItem
+                                            key={item.id}
+                                            title={item.name}
+                                            price={item.price}
+                                            image={item.image}
+                                            quantity={item.quantity}
+                                        />
+                                    ))
+                                ) : (
+                                    <p className="text-sm text-foreground/60">Your cart is empty</p>
+                                )}
                             </div>
 
                             {/* DISCOUNT */}
@@ -148,11 +153,11 @@ export default function CheckoutPage() {
 
                             {/* TOTAL */}
                             <div className="space-y-2 text-sm">
-                                <Row label="Subtotal · 3 items" value="₹1,197.00" />
-                                <Row label="Shipping" value="FREE" />
+                                <Row label={`Subtotal · ${cartItems.length} item${cartItems.length !== 1 ? 's' : ''}`} value={`₹${subtotal.toFixed(2)}`} />
+                                <Row label="Shipping" value={shipping === 0 ? "FREE" : `₹${shipping}`} />
                                 <div className="border-t pt-3 flex justify-between font-medium text-base">
                                     <span>Total</span>
-                                    <span>₹1,197.00</span>
+                                    <span>₹{total.toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
@@ -195,20 +200,24 @@ function CartItem({
     title,
     price,
     image,
+    quantity,
 }: {
     title: string;
-    price: string;
+    price: number;
     image: string;
+    quantity: number;
 }) {
     return (
         <div className="flex gap-4">
             <div className="relative w-14 h-14 bg-foreground/10">
                 <Image src={image} alt={title} fill className="object-cover rounded-lg" />
-                <span className="w-5 h-5 flex items-center justify-center bg-brand text-xs text-background p-2 rounded-full absolute -top-1.5 -right-1.5">4</span>
+                <span className="w-5 h-5 flex items-center justify-center bg-brand text-xs text-background p-2 rounded-full absolute -top-1.5 -right-1.5">
+                    {quantity}
+                </span>
             </div>
             <div className="flex-1">
                 <p className="text-sm">{title}</p>
-                <p className="text-sm text-foreground/70">{price}</p>
+                <p className="text-sm text-foreground/70">₹{price.toFixed(2)}</p>
             </div>
         </div>
     );

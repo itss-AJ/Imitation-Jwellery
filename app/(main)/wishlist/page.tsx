@@ -5,25 +5,6 @@ import EmptyStateSection from "@/app/components/EmptyStateSection"
 import Image from "next/image"
 import { useWishlist, useRemoveFromWishlist } from "@/hooks/use-wishlist"
 
-type WishlistItem = {
-  id: number
-  title: string
-  price: string
-  image: string
-}
-
-const initialWishlistItems: WishlistItem[] = [
-  { id: 1, title: "Heart Gold Pendant", price: "Rs. 299.00", image: "/img/bracelet-img.webp" },
-  { id: 2, title: "Classic Fan Pendant", price: "Rs. 399.00", image: "/img/bracelets.webp" },
-  { id: 3, title: "Ruby Square Pendant", price: "Rs. 499.00", image: "/img/earring.webp" },
-  { id: 4, title: "Heart Gold Pendant", price: "Rs. 299.00", image: "/img/bracelet-img.webp" },
-  { id: 5, title: "Classic Fan Pendant", price: "Rs. 399.00", image: "/img/bracelets.webp" },
-  { id: 6, title: "Ruby Square Pendant", price: "Rs. 499.00", image: "/img/earring.webp" },
-  { id: 7, title: "Heart Gold Pendant", price: "Rs. 299.00", image: "/img/bracelet-img.webp" },
-  { id: 8, title: "Classic Fan Pendant", price: "Rs. 399.00", image: "/img/bracelets.webp" },
-  { id: 9, title: "Ruby Square Pendant", price: "Rs. 499.00", image: "/img/earring.webp" },
-]
-
 export default function Wishlist() {
   const { data: wishlistItems = [] } = useWishlist()
   const removeFromWishlist = useRemoveFromWishlist()
@@ -54,7 +35,7 @@ export default function Wishlist() {
 
                       <button
                         className="text-xs text-foreground/70 cursor-pointer underline underline-offset-2 hover:text-foreground w-fit"
-                        onClick={() => removeFromWishlist.mutate(item.id)}
+                        onClick={() => removeFromWishlist.mutate(String(item.id))}
                         disabled={removeFromWishlist.isPending}
                       >
                         {removeFromWishlist.isPending ? "Removing..." : "Remove"}
