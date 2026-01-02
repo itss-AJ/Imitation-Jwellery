@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { Fragment, useState, useEffect } from "react"
+import { Fragment, useState, useEffect, useRef } from "react"
 import { Dialog, Transition } from "@headlessui/react"
 import { X } from "lucide-react"
 import CommonInput from "@/app/components/input/CommonInput"
@@ -17,28 +17,56 @@ type EditProfileModalProps = {
 export default function EditProfileModal({ open, onClose }: EditProfileModalProps) {
   const { data: userProfile } = useUserProfile()
   const updateProfile = useUpdateProfile()
+  
   const [formData, setFormData] = useState({
-    firstName: userProfile?.name?.split(" ")[0] || "",
-    lastName: userProfile?.name?.split(" ")[1] || "",
-    email: userProfile?.email || "",
+    firstName: "",
+    lastName: "",
+    email: "",
   })
+  
+  // Use ref to track if we should sync on next open
+  const shouldSyncRef = useRef(true)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Update form data when userProfile changes
+  // Sync form data when modal opens
   useEffect(() => {
-    if (userProfile) {
-      const firstName = userProfile.name?.split(" ")[0] || ""
-      const lastName = userProfile.name?.split(" ")[1] || ""
-      const email = userProfile.email || ""
-      
-      // Only update if values have changed to avoid infinite loops
-      setFormData((prev) => {
-        if (prev.firstName !== firstName || prev.lastName !== lastName || prev.email !== email) {
-          return { firstName, lastName, email }
-        }
-        return prev
-      })
+    // Clear any existing timeout to prevent race conditions
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
     }
-  }, [userProfile])
+    
+    if (open && userProfile && shouldSyncRef.current) {
+      // Schedule the update for next render cycle to avoid cascading
+      timeoutRef.current = setTimeout(() => {
+        // Split name more robustly
+        const nameParts = (userProfile.name || "").trim().split(/\s+/)
+        const firstName = nameParts[0] || ""
+        const lastName = nameParts.slice(1).join(" ") || ""
+        
+        setFormData({
+          firstName,
+          lastName,
+          email: userProfile.email || "",
+        })
+        timeoutRef.current = null
+      }, 0)
+      shouldSyncRef.current = false
+    }
+    
+    // Reset sync flag when modal closes
+    if (!open) {
+      shouldSyncRef.current = true
+    }
+    
+    // Cleanup function runs when effect dependencies change or component unmounts
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+    }
+  }, [open, userProfile])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
