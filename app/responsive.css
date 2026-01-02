@@ -1,0 +1,147 @@
+@media (max-width: 1299px) {
+  .webHeaderLinksWrap{
+    gap: 10px;
+  }
+}
+@media (max-width: 1199px) {
+  .webHeaderLinksWrap a{
+    font-size: 12px;
+  }
+  .heroBannerImg {
+    height: fit-content;
+    max-height: 500px;
+  }
+}
+@media (max-width: 1024px) {
+  .featuredCollectionBestSellerVdo{
+    grid-row: 1;
+  }
+}
+@media (max-width: 768px) {
+  .commonSliderWrap .swiper-button-prev, .commonSliderWrap .swiper-button-next {
+    display: none;
+  }
+  .commonSliderWrap .swiper {
+    margin: 0 0;
+    padding: 0 0 40px;
+  }
+}
+@media (max-width: 767px) {
+  .productCategoryItem .absolute.opacity-0 {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .otpInputWrap input {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .authPageWrap {
+    padding: 1rem;
+    align-items: center;
+
+  }
+
+  .signInCard {
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    width: 100%;
+    padding: 0;
+  }
+}
+
+@media (max-width: 576px) {
+  .productGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .productCategoryItem {
+    height: 150px;
+  }
+
+  .commonProductCard .wishlistButton {
+    opacity: 1;
+    right: 6px;
+    top: 6px;
+  }
+  .productTag{
+    left: 6px;
+    top: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .commonProductCard .commonProductImgWrap {
+    height: 200px;
+    margin-bottom: 8px;
+  }
+
+  .commonProductCard .commonProductTxtWrap h4 {
+    font-size: 15px;
+    margin-bottom: 8px;
+  }
+
+  .commonProductCard .commonProductTxtWrap .mb-4 {
+    margin-bottom: 8px;
+  }
+
+  .commonProductCard {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .commonProductCard>button {
+    margin-top: auto;
+  }
+
+  .commonProductPrice {
+    font-size: 14px;
+  }
+
+  .commonProductGrid {
+    gap: 16px;
+  }
+  .customerReviewCard{
+    padding: 10px 16px;
+    align-items: center;
+  }
+}
+
+@media (max-width: 414px) {
+  .commonProductCard .commonProductImgWrap {
+    height: 180px;
+  }
+  .productCategoryItem {
+    padding: 10px;
+  }
+  .commonProductOldPrice{
+    font-size: 12px;
+  }
+  .commonProductCard .commonProductTxtWrap h4 {
+    margin-bottom: 4px;
+  }
+  .commonProductCard .commonProductTxtWrap .mb-4 {
+    flex-direction: column;
+    gap: 0;
+  }
+  .accountUserCard{
+    flex-direction: column;
+  }
+  .accountTabsLink{
+    font-size: 12px;
+  }
+}
+@media (max-width: 360px) {
+  .productCategoryItem button{
+    font-size: 12px;
+    padding: 10px 15px;
+  }
+  .commonProductCard > button {
+    font-size: 12px;
+    padding: 12px 15px;
+  }
+}
