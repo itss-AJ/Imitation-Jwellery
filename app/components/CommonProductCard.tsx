@@ -54,9 +54,14 @@ export default function CommonProductCard({
     e.preventDefault()
 
     if (isWishlisted) {
-      removeFromWishlist.mutate(productId)
+      removeFromWishlist.mutate(String(productId))
     } else {
-      addToWishlist.mutate(productId)
+      addToWishlist.mutate({
+        productId: String(productId),
+        title,
+        price,
+        image,
+      })
     }
     setIsWishlisted((prev) => !prev)
   }
@@ -65,7 +70,15 @@ export default function CommonProductCard({
     if (e) {
       e.stopPropagation()
     }
-    addToCart.mutate({ productId, quantity: 1 })
+    // Parse price to number, removing currency symbols and commas
+    const priceNumber = parseFloat(price.replace(/[^0-9.]/g, ""))
+    addToCart.mutate({
+      productId: String(productId),
+      name: title,
+      price: priceNumber,
+      image,
+      quantity: 1,
+    })
     onAddToCart?.()
   }
 

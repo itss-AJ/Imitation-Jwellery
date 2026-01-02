@@ -30,11 +30,19 @@ export const useAddToCart = () => {
 
       // Optimistically update cache
       if (previousCart) {
-        const existingItem = previousCart.items.find((item) => item.productId === newItem.productId)
-        if (existingItem) {
-          existingItem.quantity += newItem.quantity || 1
+        // Create immutable copies
+        const updatedItems = [...previousCart.items]
+        const existingItemIndex = updatedItems.findIndex((item) => item.productId === newItem.productId)
+        
+        if (existingItemIndex !== -1) {
+          // Update existing item immutably
+          updatedItems[existingItemIndex] = {
+            ...updatedItems[existingItemIndex],
+            quantity: updatedItems[existingItemIndex].quantity + (newItem.quantity || 1),
+          }
         } else {
-          previousCart.items.push({
+          // Add new item
+          updatedItems.push({
             id: newItem.productId,
             productId: newItem.productId,
             name: newItem.name,
@@ -43,8 +51,9 @@ export const useAddToCart = () => {
             image: newItem.image,
           })
         }
-        previousCart.total = previousCart.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-        queryClient.setQueryData(["cart"], previousCart)
+        
+        const newTotal = updatedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+        queryClient.setQueryData(["cart"], { items: updatedItems, total: newTotal })
       }
 
       return { previousCart }
@@ -72,9 +81,10 @@ export const useRemoveFromCart = () => {
       const previousCart = queryClient.getQueryData<Cart>(["cart"])
 
       if (previousCart) {
-        previousCart.items = previousCart.items.filter((item) => item.id !== cartItemId)
-        previousCart.total = previousCart.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-        queryClient.setQueryData(["cart"], previousCart)
+        // Create immutable copies
+        const updatedItems = previousCart.items.filter((item) => item.id !== cartItemId)
+        const newTotal = updatedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+        queryClient.setQueryData(["cart"], { items: updatedItems, total: newTotal })
       }
 
       return { previousCart }
@@ -101,12 +111,12 @@ export const useUpdateCartQuantity = () => {
       const previousCart = queryClient.getQueryData<Cart>(["cart"])
 
       if (previousCart) {
-        const item = previousCart.items.find((item) => item.id === cartItemId)
-        if (item) {
-          item.quantity = quantity
-        }
-        previousCart.total = previousCart.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-        queryClient.setQueryData(["cart"], previousCart)
+        // Create immutable copies
+        const updatedItems = previousCart.items.map((item) =>
+          item.id === cartItemId ? { ...item, quantity } : item
+        )
+        const newTotal = updatedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+        queryClient.setQueryData(["cart"], { items: updatedItems, total: newTotal })
       }
 
       return { previousCart }

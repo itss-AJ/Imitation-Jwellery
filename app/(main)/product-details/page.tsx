@@ -52,6 +52,10 @@ export default function ProductDetailsPage() {
   ]
 
   const PRODUCT_ID = 1
+  const PRODUCT_NAME = "Gold Plated Jewelry Set"
+  const PRODUCT_PRICE = 2499
+  const PRODUCT_IMAGE = thumbnails[0]
+  
   const [quantity, setQuantity] = useState(1)
   const [activeImage, setActiveImage] = useState(thumbnails[0])
 
@@ -61,12 +65,24 @@ export default function ProductDetailsPage() {
   const { data: isWishlisted = false } = useIsWishlisted(PRODUCT_ID)
 
   const handleAddToCart = () => {
-    addToCart.mutate({ productId: PRODUCT_ID, quantity })
+    addToCart.mutate({
+      productId: String(PRODUCT_ID),
+      name: PRODUCT_NAME,
+      price: PRODUCT_PRICE,
+      image: PRODUCT_IMAGE,
+      quantity,
+    })
   }
 
   const handleOrderNow = () => {
     addToCart.mutate(
-      { productId: PRODUCT_ID, quantity },
+      {
+        productId: String(PRODUCT_ID),
+        name: PRODUCT_NAME,
+        price: PRODUCT_PRICE,
+        image: PRODUCT_IMAGE,
+        quantity,
+      },
       {
         onSuccess: () => {
           router.push("/checkout")
@@ -77,9 +93,14 @@ export default function ProductDetailsPage() {
 
   const handleWishlistToggle = () => {
     if (isWishlisted) {
-      removeFromWishlist.mutate(PRODUCT_ID)
+      removeFromWishlist.mutate(String(PRODUCT_ID))
     } else {
-      addToWishlist.mutate(PRODUCT_ID)
+      addToWishlist.mutate({
+        productId: String(PRODUCT_ID),
+        title: PRODUCT_NAME,
+        price: "Rs. 2,499.00",
+        image: PRODUCT_IMAGE,
+      })
     }
   }
 

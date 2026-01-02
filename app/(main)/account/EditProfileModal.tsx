@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { Fragment, useState } from "react"
+import { Fragment, useState, useEffect } from "react"
 import { Dialog, Transition } from "@headlessui/react"
 import { X } from "lucide-react"
 import CommonInput from "@/app/components/input/CommonInput"
@@ -22,6 +22,23 @@ export default function EditProfileModal({ open, onClose }: EditProfileModalProp
     lastName: userProfile?.name?.split(" ")[1] || "",
     email: userProfile?.email || "",
   })
+
+  // Update form data when userProfile changes
+  useEffect(() => {
+    if (userProfile) {
+      const firstName = userProfile.name?.split(" ")[0] || ""
+      const lastName = userProfile.name?.split(" ")[1] || ""
+      const email = userProfile.email || ""
+      
+      // Only update if values have changed to avoid infinite loops
+      setFormData((prev) => {
+        if (prev.firstName !== firstName || prev.lastName !== lastName || prev.email !== email) {
+          return { firstName, lastName, email }
+        }
+        return prev
+      })
+    }
+  }, [userProfile])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target

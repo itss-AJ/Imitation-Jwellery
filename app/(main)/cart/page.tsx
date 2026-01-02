@@ -49,10 +49,11 @@ const PRODUCTS = [
 export default function CartPage() {
   const [openLogin, setOpenLogin] = useState(false)
 
-  const { data: cartItems = [] } = useCart()
+  const { data: cart } = useCart()
   const updateQuantity = useUpdateCartQuantity()
   const removeFromCart = useRemoveFromCart()
 
+  const cartItems = cart?.items || []
   const subtotal =
     Array.isArray(cartItems) && cartItems.length > 0
       ? cartItems.reduce((sum, item) => {

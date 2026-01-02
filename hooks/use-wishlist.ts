@@ -23,17 +23,21 @@ export const useAddToWishlist = () => {
       addToWishlist(productId, title, price, image),
     onMutate: async (newItem) => {
       await queryClient.cancelQueries({ queryKey: ["wishlist"] })
-      const previousWishlist = queryClient.getQueryData<any>(["wishlist"])
+      const previousWishlist = queryClient.getQueryData<Wishlist>(["wishlist"])
 
-      if (Array.isArray(previousWishlist)) {
-        previousWishlist.push({
-          id: newItem.productId,
-          productId: newItem.productId,
-          title: newItem.title,
-          price: newItem.price,
-          image: newItem.image,
-        })
-        queryClient.setQueryData(["wishlist"], previousWishlist)
+      if (previousWishlist) {
+        // Work with the raw Wishlist object structure { items: [...] }
+        const updatedItems = [
+          ...previousWishlist.items,
+          {
+            id: newItem.productId,
+            productId: newItem.productId,
+            title: newItem.title,
+            price: newItem.price,
+            image: newItem.image,
+          },
+        ]
+        queryClient.setQueryData(["wishlist"], { items: updatedItems })
       }
 
       return { previousWishlist }
@@ -45,6 +49,7 @@ export const useAddToWishlist = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wishlist-count"] })
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] })
     },
   })
 }
@@ -56,11 +61,12 @@ export const useRemoveFromWishlist = () => {
     mutationFn: (wishlistItemId: string) => removeFromWishlist(wishlistItemId),
     onMutate: async (wishlistItemId) => {
       await queryClient.cancelQueries({ queryKey: ["wishlist"] })
-      const previousWishlist = queryClient.getQueryData<any>(["wishlist"])
+      const previousWishlist = queryClient.getQueryData<Wishlist>(["wishlist"])
 
-      if (Array.isArray(previousWishlist)) {
-        const updatedList = previousWishlist.filter((item) => item.id !== wishlistItemId)
-        queryClient.setQueryData(["wishlist"], updatedList)
+      if (previousWishlist) {
+        // Work with the raw Wishlist object structure { items: [...] }
+        const updatedItems = previousWishlist.items.filter((item) => item.id !== wishlistItemId)
+        queryClient.setQueryData(["wishlist"], { items: updatedItems })
       }
 
       return { previousWishlist }
@@ -72,6 +78,7 @@ export const useRemoveFromWishlist = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wishlist-count"] })
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] })
     },
   })
 }
