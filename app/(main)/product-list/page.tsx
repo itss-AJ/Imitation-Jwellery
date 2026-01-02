@@ -6,9 +6,8 @@ import CommonHeading from "@/app/components/CommonHeading"
 import CommonProductCard from "@/app/components/CommonProductCard"
 import RangeSlider from "@/app/components/RangeSlider"
 import CommonSelect from "@/app/components/select/CommonSelect"
-import { Checkbox, Dialog, DialogPanel, Popover, PopoverButton, PopoverPanel } from "@headlessui/react"
-import { Check, CheckIcon, ChevronDown, Filter } from "lucide-react"
-import Link from "next/link"
+import { Dialog, DialogPanel, Popover, PopoverButton, PopoverPanel } from "@headlessui/react"
+import { ChevronDown, Filter } from "lucide-react"
 import { useState } from "react"
 import { useProducts } from "@/hooks/use-products"
 
@@ -25,20 +24,24 @@ const sortOptions = [
 
 export default function ProductList() {
   const [openCart, setOpenCart] = useState(false)
-  const [enabled, setEnabled] = useState(true)
   const [selected, setSelected] = useState(sortOptions[0])
-  const [price, setPrice] = useState<[number, number]>([33, 410])
+  const [price, setPrice] = useState<[number, number]>([0, 500])
   const [openMobileFilter, setOpenMobileFilter] = useState(false)
 
   const { data, isLoading } = useProducts({
     sort: selected.value,
     minPrice: price[0],
     maxPrice: price[1],
-    page: 1, // Defaulting to page 1 for now
+    page: 1,
   })
 
   const products = data?.data || []
   const totalProducts = data?.meta.totalItems || 0
+
+  const handleClearAll = () => {
+    setPrice([0, 500])
+    setSelected(sortOptions[0])
+  }
 
   return (
     <>
@@ -56,42 +59,6 @@ export default function ProductList() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
                 <span className="font-medium text-sm text-foreground">FILTER:</span>
-                <Popover className="relative">
-                  <PopoverButton className="outline-0 focus:outline-0 px-4 py-2 border border-foreground/20 rounded-lg flex items-center gap-5">
-                    Availability <ChevronDown />
-                  </PopoverButton>
-                  <PopoverPanel
-                    anchor="bottom"
-                    className="translate-y-2 flex flex-col z-10 bg-background border border-foreground/20 rounded-lg w-56"
-                  >
-                    <div className="px-5 py-3 flex items-center justify-between gap-2 border-b border-foreground/20">
-                      <p className="text-sm font-normal text-foreground">0 Selected</p>
-                      <Link href="#" className="commonLink">
-                        Reset
-                      </Link>
-                    </div>
-                    <div className="px-5 py-3 flex items-center gap-2">
-                      <Checkbox
-                        checked={enabled}
-                        onChange={setEnabled}
-                        className="group size-6 rounded-md bg-foreground/10 p-1 ring-1 ring-white/15 ring-inset focus:not-data-focus:outline-none data-checked:bg-brand"
-                      >
-                        <Check className="hidden size-4 fill-transparent stroke-background group-data-checked:block text-brand" />
-                      </Checkbox>
-                      <p className="text-sm font-normal">In Stock (10)</p>
-                    </div>
-                    <div className="px-5 py-3 flex items-center gap-2">
-                      <Checkbox
-                        checked={enabled}
-                        onChange={setEnabled}
-                        className="group size-6 rounded-md bg-foreground/10 p-1 ring-1 ring-white/15 ring-inset focus:not-data-focus:outline-none data-checked:bg-brand"
-                      >
-                        <Check className="hidden size-4 fill-transparent stroke-background group-data-checked:block text-brand" />
-                      </Checkbox>
-                      <p className="text-sm font-normal">Out of Stock (0)</p>
-                    </div>
-                  </PopoverPanel>
-                </Popover>
 
                 <Popover className="relative">
                   <PopoverButton className="outline-0 focus:outline-0 px-4 py-2 border border-foreground/20 rounded-lg flex items-center gap-5">
@@ -129,11 +96,15 @@ export default function ProductList() {
             {/* ACTIVE FILTER */}
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-2 bg-muted px-4 py-2 rounded-full text-sm">
-                Rs. 127.00 - Rs. 499.00
-                <button className="text-lg leading-none">×</button>
+                Rs. {price[0]}.00 - Rs. {price[1]}.00
+                <button className="text-lg leading-none" onClick={() => setPrice([0, 500])}>
+                  ×
+                </button>
               </span>
 
-              <button className="text-sm underline">Clear all</button>
+              <button className="text-sm underline" onClick={handleClearAll}>
+                Clear all
+              </button>
             </div>
           </div>
           {/* MOBILE FILTER BAR */}
@@ -207,33 +178,6 @@ export default function ProductList() {
               </button>
             </div>
 
-            {/* AVAILABILITY */}
-            <div className="mb-6">
-              <h4 className="text-sm font-medium mb-3">Availability</h4>
-
-              <div className="flex items-center gap-2 mb-3">
-                <Checkbox
-                  checked={enabled}
-                  onChange={setEnabled}
-                  className="group size-5 rounded-md bg-foreground/10 p-1 data-checked:bg-brand"
-                >
-                  <CheckIcon className="hidden size-3 group-data-checked:block text-background" />
-                </Checkbox>
-                <p className="text-sm">In Stock (10)</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  checked={enabled}
-                  onChange={setEnabled}
-                  className="group size-5 rounded-md bg-foreground/10 p-1 data-checked:bg-brand"
-                >
-                  <CheckIcon className="hidden size-3 group-data-checked:block text-background" />
-                </Checkbox>
-                <p className="text-sm">Out of Stock (0)</p>
-              </div>
-            </div>
-
             {/* PRICE */}
             <div className="mb-8">
               <h4 className="text-sm font-medium mb-3">Price</h4>
@@ -242,7 +186,7 @@ export default function ProductList() {
 
             {/* ACTION BUTTONS */}
             <div className="flex gap-4">
-              <CommonButton variant="secondaryBtn" className="w-full" onClick={() => setOpenMobileFilter(false)}>
+              <CommonButton variant="secondaryBtn" className="w-full" onClick={handleClearAll}>
                 Clear
               </CommonButton>
 
