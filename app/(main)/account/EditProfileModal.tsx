@@ -26,21 +26,31 @@ export default function EditProfileModal({ open, onClose }: EditProfileModalProp
   
   // Use ref to track if we should sync on next open
   const shouldSyncRef = useRef(true)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Sync form data when modal opens
   useEffect(() => {
     if (open && userProfile && shouldSyncRef.current) {
       // Schedule the update for next render cycle to avoid cascading
-      const timeoutId = setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
+        // Split name more robustly
+        const nameParts = (userProfile.name || "").trim().split(/\s+/)
+        const firstName = nameParts[0] || ""
+        const lastName = nameParts.slice(1).join(" ") || ""
+        
         setFormData({
-          firstName: userProfile.name?.split(" ")[0] || "",
-          lastName: userProfile.name?.split(" ")[1] || "",
+          firstName,
+          lastName,
           email: userProfile.email || "",
         })
       }, 0)
       shouldSyncRef.current = false
       
-      return () => clearTimeout(timeoutId)
+      return () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+        }
+      }
     }
     
     // Reset sync flag when modal closes
