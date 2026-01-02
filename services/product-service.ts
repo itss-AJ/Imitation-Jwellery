@@ -27,6 +27,9 @@ export interface ProductFilters {
   limit?: number
 }
 
+// Use environment variable for API base URL, fallback to localhost:8018 for development
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8018'
+
 /**
  * Fetch products from the backend API
  * @param filters - Optional filters for sorting, price range, and pagination
@@ -54,7 +57,7 @@ export const fetchProducts = async (filters: ProductFilters = {}): Promise<Produ
 
   // Build URL with query string
   const queryString = params.toString()
-  const url = `/api/v1/products${queryString ? `?${queryString}` : ''}`
+  const url = `${API_BASE_URL}/api/v1/products${queryString ? `?${queryString}` : ''}`
 
   // Make the API call
   const response = await fetch(url)
