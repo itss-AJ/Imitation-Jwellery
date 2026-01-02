@@ -49,19 +49,26 @@ interface BackendProduct {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8018'
 
 /**
+ * Format price in Indian Rupees format
+ */
+const formatPrice = (price: number): string => {
+  return `Rs. ${price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+/**
  * Transform backend product to frontend product format
  */
 const transformProduct = (backendProduct: BackendProduct): Product => {
   const product: Product = {
     id: backendProduct._id,
     title: backendProduct.name,
-    price: `Rs. ${backendProduct.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    price: formatPrice(backendProduct.price),
     image: backendProduct.thumbnail || backendProduct.images?.[0] || '/img/placeholder.webp',
   }
 
   // Add old price if MRP is higher than price
   if (backendProduct.mrp && backendProduct.mrp > backendProduct.price) {
-    product.oldPrice = `Rs. ${backendProduct.mrp.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    product.oldPrice = formatPrice(backendProduct.mrp)
   }
 
   // Add tag based on product flags
