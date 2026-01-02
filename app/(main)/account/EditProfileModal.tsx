@@ -59,7 +59,7 @@ export default function EditProfileModal({ open, onClose }: EditProfileModalProp
       shouldSyncRef.current = true
     }
     
-    // Cleanup only on unmount or when dependencies change
+    // Cleanup function runs when effect dependencies change or component unmounts
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
