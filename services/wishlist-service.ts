@@ -44,6 +44,7 @@ export const addToWishlist = async (
 export const removeFromWishlist = async (wishlistItemId: string): Promise<Wishlist> => {
   await new Promise((resolve) => setTimeout(resolve, 200))
   
+  // Filter by both id and productId for backwards compatibility with existing code
   wishlistStore = wishlistStore.filter(item => item.id !== wishlistItemId && item.productId !== wishlistItemId)
   
   return { items: [...wishlistStore] }

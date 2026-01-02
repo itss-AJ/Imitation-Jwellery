@@ -22,10 +22,13 @@ const sortOptions = [
   { label: "Date, new to old", value: "date-desc" },
 ]
 
+// Maximum price for product filtering
+const MAX_PRODUCT_PRICE = 1000
+
 export default function ProductList() {
   const [openCart, setOpenCart] = useState(false)
   const [selected, setSelected] = useState(sortOptions[0])
-  const [price, setPrice] = useState<[number, number]>([0, 1000])
+  const [price, setPrice] = useState<[number, number]>([0, MAX_PRODUCT_PRICE])
   const [openMobileFilter, setOpenMobileFilter] = useState(false)
 
   const { data, isLoading } = useProducts({
@@ -39,7 +42,7 @@ export default function ProductList() {
   const totalProducts = data?.meta.totalItems || 0
 
   const handleClearAll = () => {
-    setPrice([0, 1000])
+    setPrice([0, MAX_PRODUCT_PRICE])
     setSelected(sortOptions[0])
   }
 
@@ -70,7 +73,7 @@ export default function ProductList() {
                     className="translate-y-2 px-6 py-6 flex flex-col z-10 bg-background border border-foreground/20 rounded-lg w-56"
                   >
                     <div className=" py-3 flex items-center gap-2">
-                      <RangeSlider min={0} max={1000} value={price} onChange={setPrice} />
+                      <RangeSlider min={0} max={MAX_PRODUCT_PRICE} value={price} onChange={setPrice} />
                     </div>
                   </PopoverPanel>
                 </Popover>
@@ -94,11 +97,11 @@ export default function ProductList() {
             </div>
 
             {/* ACTIVE FILTER */}
-            {(price[0] > 0 || price[1] < 1000) && (
+            {(price[0] > 0 || price[1] < MAX_PRODUCT_PRICE) && (
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-2 bg-muted px-4 py-2 rounded-full text-sm">
                   Rs. {price[0]}.00 - Rs. {price[1]}.00
-                  <button className="text-lg leading-none" onClick={() => setPrice([0, 1000])}>
+                  <button className="text-lg leading-none" onClick={() => setPrice([0, MAX_PRODUCT_PRICE])}>
                     ×
                   </button>
                 </span>
@@ -183,7 +186,7 @@ export default function ProductList() {
             {/* PRICE */}
             <div className="mb-8">
               <h4 className="text-sm font-medium mb-3">Price</h4>
-              <RangeSlider min={0} max={1000} value={price} onChange={setPrice} />
+              <RangeSlider min={0} max={MAX_PRODUCT_PRICE} value={price} onChange={setPrice} />
             </div>
 
             {/* ACTION BUTTONS */}

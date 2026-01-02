@@ -27,6 +27,9 @@ export interface ProductFilters {
   limit?: number
 }
 
+// Maximum price for product filtering
+const MAX_PRODUCT_PRICE = 1000
+
 /**
  * Helper function to parse price from string format (e.g., "Rs. 299.00")
  * Extracts numeric value by removing non-numeric characters except decimal point
@@ -114,7 +117,7 @@ export const fetchProducts = async (filters: ProductFilters): Promise<ProductLis
   // Only apply price filter if it's different from default full range
   if (filters.minPrice !== undefined && filters.maxPrice !== undefined) {
     // Only filter if range is narrower than full range
-    if (filters.minPrice > 0 || filters.maxPrice < 1000) {
+    if (filters.minPrice > 0 || filters.maxPrice < MAX_PRODUCT_PRICE) {
       products = products.filter((p) => {
         const priceNum = parsePrice(p.price)
         return priceNum >= filters.minPrice! && priceNum <= filters.maxPrice!
