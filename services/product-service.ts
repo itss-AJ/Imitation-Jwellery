@@ -30,6 +30,9 @@ export interface ProductFilters {
 // Use environment variable for API base URL, fallback to localhost:8018 for development
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8018'
 
+// Default pagination limit for calculating total pages
+const DEFAULT_PAGE_LIMIT = 10
+
 /**
  * Fetch products from the backend API
  * @param filters - Optional filters for sorting, price range, and pagination
@@ -68,8 +71,10 @@ export const fetchProducts = async (filters: ProductFilters = {}): Promise<Produ
 
   const responseData = await response.json()
   
-  // Log the response to debug (remove in production)
-  console.log('API Response:', responseData)
+  // Log the response to debug (only in development)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('API Response:', responseData)
+  }
   
   // Handle various API response formats
   let products: Product[] = []
@@ -86,21 +91,21 @@ export const fetchProducts = async (filters: ProductFilters = {}): Promise<Produ
   else if (responseData.data && Array.isArray(responseData.data)) {
     products = responseData.data
     totalItems = responseData.meta?.totalItems || responseData.total || responseData.count || products.length
-    totalPages = responseData.meta?.totalPages || responseData.totalPages || Math.ceil(totalItems / (filters.limit || 10))
+    totalPages = responseData.meta?.totalPages || responseData.totalPages || Math.ceil(totalItems / (filters.limit || DEFAULT_PAGE_LIMIT))
     currentPage = responseData.meta?.currentPage || responseData.currentPage || currentPage
   }
   // Case 3: { products: [...] }
   else if (responseData.products && Array.isArray(responseData.products)) {
     products = responseData.products
     totalItems = responseData.total || responseData.count || responseData.totalItems || products.length
-    totalPages = responseData.totalPages || Math.ceil(totalItems / (filters.limit || 10))
+    totalPages = responseData.totalPages || Math.ceil(totalItems / (filters.limit || DEFAULT_PAGE_LIMIT))
     currentPage = responseData.currentPage || responseData.page || currentPage
   }
   // Case 4: { items: [...] }
   else if (responseData.items && Array.isArray(responseData.items)) {
     products = responseData.items
     totalItems = responseData.total || responseData.count || responseData.totalItems || products.length
-    totalPages = responseData.totalPages || Math.ceil(totalItems / (filters.limit || 10))
+    totalPages = responseData.totalPages || Math.ceil(totalItems / (filters.limit || DEFAULT_PAGE_LIMIT))
     currentPage = responseData.currentPage || responseData.page || currentPage
   }
   // Case 5: { success: true, data: { products: [...] } } - nested
@@ -113,7 +118,7 @@ export const fetchProducts = async (filters: ProductFilters = {}): Promise<Produ
       products = responseData.data.items
     }
     totalItems = responseData.total || responseData.count || products.length
-    totalPages = responseData.totalPages || Math.ceil(totalItems / (filters.limit || 10))
+    totalPages = responseData.totalPages || Math.ceil(totalItems / (filters.limit || DEFAULT_PAGE_LIMIT))
   }
   // Fallback: try to extract any array from the response
   else {
