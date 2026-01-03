@@ -1,62 +1,124 @@
-import { addAddress as addAddressToAuth, deleteAddress as deleteAddressFromAuth, setDefaultAddress as setDefaultAddressInAuth, fetchUserProfile, type Address, type User } from "./auth-service"
-import { parseAddressToBackend } from "@/lib/api-utils"
+import { fetchUserProfile, type Address, type User } from "./auth-service";
+import { parseAddressToBackend } from "@/lib/api-utils";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8018'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8018";
 
-export const addAddress = async (addressData: Omit<Address, "id">): Promise<User> => {
-  return addAddressToAuth(addressData)
-}
+type BackendAddressPayload = {
+  name?: string;
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  isDefault?: boolean;
+};
 
-export const updateAddress = async (addressId: string, addressData: Partial<Address>): Promise<User> => {
-  // Get current user to get customerId
-  const currentUser = await fetchUserProfile()
-  const url = `${API_BASE_URL}/api/v1/customers/${currentUser.id}/addresses/${addressId}`
+type ParsedAddress = {
+  line1: string;
+  line2?: string;
+  city: string;
+  state?: string;
+  pincode: string;
+};
 
-  // Parse address fields if they exist
-  const body: any = {}
-  
-  if (addressData.name) {
-    body.name = addressData.name
+const getCurrentCustomerId = async (): Promise<string> => {
+  const me = await fetchUserProfile();
+  if (!me?.id || me.id === "guest") {
+    throw new Error("Please sign in to manage addresses");
   }
-  
+  return me.id;
+};
+
+export const addAddress = async (
+  addressData: Omit<Address, "id">
+): Promise<User> => {
+  const customerId = await getCurrentCustomerId();
+
+  const body: BackendAddressPayload = {};
+  if (addressData.name) body.name = addressData.name;
+
+  if (addressData.address || addressData.cityZip) {
+    const parsed = parseAddressToBackend(
+      addressData.address || "",
+      addressData.cityZip || ""
+    ) as ParsedAddress;
+    Object.assign(body, parsed);
+  }
+
+  if (typeof addressData.isDefault === "boolean") {
+    body.isDefault = addressData.isDefault;
+  }
+
+  const url = `${API_BASE_URL}/api/v1/customers/${customerId}/addresses`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to add address: ${response.status}`);
+  }
+
+  return fetchUserProfile();
+};
+
+export const updateAddress = async (
+  addressId: string,
+  addressData: Partial<Address>
+): Promise<User> => {
+  const customerId = await getCurrentCustomerId();
+  const url = `${API_BASE_URL}/api/v1/customers/${customerId}/addresses/${addressId}`;
+
+  const body: BackendAddressPayload = {};
+  if (addressData.name) body.name = addressData.name;
+
   if (addressData.address && addressData.cityZip) {
-    const parsed = parseAddressToBackend(addressData.address, addressData.cityZip)
-    Object.assign(body, parsed)
+    const parsed = parseAddressToBackend(
+      addressData.address,
+      addressData.cityZip
+    ) as ParsedAddress;
+    Object.assign(body, parsed);
   } else if (addressData.address) {
-    const addressParts = addressData.address.split(',').map(s => s.trim())
-    body.line1 = addressParts[0] || ''
-    body.line2 = addressParts[1] || ''
+    const parts = addressData.address.split(",").map((s) => s.trim());
+    body.line1 = parts[0] || "";
+    body.line2 = parts[1] || "";
   } else if (addressData.cityZip) {
-    const cityZipParts = addressData.cityZip.split(',').map(s => s.trim())
-    body.city = cityZipParts[0] || ''
-    body.state = cityZipParts[1] || ''
-    body.pincode = cityZipParts[2] || cityZipParts[cityZipParts.length - 1] || ''
+    const parts = addressData.cityZip.split(",").map((s) => s.trim());
+    body.city = parts[0] || "";
+    body.state = parts[1] || "";
+    body.pincode = parts[2] || parts[parts.length - 1] || "";
   }
-  
-  if (addressData.isDefault !== undefined) {
-    body.isDefault = addressData.isDefault
+
+  if (typeof addressData.isDefault === "boolean") {
+    body.isDefault = addressData.isDefault;
   }
 
   const response = await fetch(url, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  })
+  });
 
   if (!response.ok) {
-    throw new Error(`Failed to update address: ${response.status}`)
+    throw new Error(`Failed to update address: ${response.status}`);
   }
 
-  // Fetch updated profile with addresses
-  return fetchUserProfile()
-}
+  return fetchUserProfile();
+};
 
 export const deleteAddress = async (addressId: string): Promise<User> => {
-  return deleteAddressFromAuth(addressId)
-}
+  const customerId = await getCurrentCustomerId();
+  const url = `${API_BASE_URL}/api/v1/customers/${customerId}/addresses/${addressId}`;
+
+  const response = await fetch(url, { method: "DELETE" });
+  if (!response.ok) {
+    throw new Error(`Failed to delete address: ${response.status}`);
+  }
+
+  return fetchUserProfile();
+};
 
 export const setDefaultAddress = async (addressId: string): Promise<User> => {
-  return setDefaultAddressInAuth(addressId)
-}
+  return updateAddress(addressId, { isDefault: true });
+};

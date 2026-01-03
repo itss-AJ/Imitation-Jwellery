@@ -1,12 +1,17 @@
-"use client"
-import CommonButton from "@/app/components/button/CommonButton"
-import CommonHeading from "@/app/components/CommonHeading"
-import CommonProductCard from "@/app/components/CommonProductCard"
-import EmptyStateSection from "@/app/components/EmptyStateSection"
-import CommonTextarea from "@/app/components/input/CommonTextArea"
-import LoginToContinueModal from "@/app/components/LoginToContinue"
-import { useState } from "react"
-import { useCart, useUpdateCartQuantity, useRemoveFromCart } from "@/hooks/use-cart"
+"use client";
+import CommonButton from "@/app/components/button/CommonButton";
+import CommonHeading from "@/app/components/CommonHeading";
+import CommonProductCard from "@/app/components/CommonProductCard";
+import EmptyStateSection from "@/app/components/EmptyStateSection";
+import CommonTextarea from "@/app/components/input/CommonTextArea";
+import LoginToContinueModal from "@/app/components/LoginToContinue";
+import { useState } from "react";
+// Use actual exported hook names
+import {
+  useCart,
+  useUpdateCartQuantity,
+  useRemoveFromCart,
+} from "@/hooks/use-cart";
 
 const PRODUCTS = [
   {
@@ -44,30 +49,32 @@ const PRODUCTS = [
     oldPrice: "Rs. 1,349.00",
     image: "/img/necklace.webp",
   },
-]
+];
 
 export default function CartPage() {
-  const [openLogin, setOpenLogin] = useState(false)
+  const [openLogin, setOpenLogin] = useState(false);
 
-  const { data: cart } = useCart()
-  const updateQuantity = useUpdateCartQuantity()
-  const removeFromCart = useRemoveFromCart()
+  const { data: cart } = useCart();
+  const updateQuantity = useUpdateCartQuantity();
+  const removeFromCart = useRemoveFromCart();
 
-  const cartItems = cart?.items || []
+  // Cart items follow { id, productId, name, price, quantity, image }
+  const cartItems = Array.isArray(cart?.items) ? cart!.items : [];
+
+  // Calculate totals using transformed frontend fields (price, quantity)
   const subtotal =
-    Array.isArray(cartItems) && cartItems.length > 0
+    cartItems.length > 0
       ? cartItems.reduce((sum, item) => {
-          // Guard against missing price property
-          const itemPrice = typeof item.price === "number" ? item.price : 0
-          const itemQty = typeof item.quantity === "number" ? item.quantity : 1
-          return sum + itemPrice * itemQty
+          const itemPrice = typeof item.price === "number" ? item.price : 0;
+          const itemQty = typeof item.quantity === "number" ? item.quantity : 1;
+          return sum + itemPrice * itemQty;
         }, 0)
-      : 0
+      : 0;
 
-  const shipping = 0
-  const total = subtotal + shipping
+  const shipping = 0;
+  const total = subtotal + shipping;
 
-  const isEmpty = !Array.isArray(cartItems) || cartItems.length === 0
+  const isEmpty = cartItems.length === 0;
 
   return (
     <>
@@ -77,7 +84,11 @@ export default function CartPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* ================= CART ITEMS ================= */}
               <div className="lg:col-span-2">
-                <CommonHeading level={1} title="Your Cart" className="text-left" />
+                <CommonHeading
+                  level={1}
+                  title="Your Cart"
+                  className="text-left"
+                />
 
                 {/* DESKTOP HEADER */}
                 {!isEmpty && (
@@ -94,33 +105,42 @@ export default function CartPage() {
                     {cartItems.map((item) => (
                       <div
                         key={item.id}
-                        className="
-                      flex flex-col lg:grid
-                      lg:grid-cols-[1fr_200px_150px]
-                      gap-6 border-b border-foreground/20 pb-6 md:pb-6"
+                        className="flex flex-col lg:grid lg:grid-cols-[1fr_200px_150px] gap-6 border-b border-foreground/20 pb-6 md:pb-6"
                       >
                         {/* PRODUCT */}
                         <div className="flex gap-6">
                           <img
                             src={item.image || "/placeholder.svg"}
-                            alt={item.name}
+                            alt={item.name || item.productId || "Product"}
                             className="w-16 h-16 min-w-16 md:w-28 md:h-28 md:min-w-28 object-cover rounded-md"
                           />
 
                           <div>
                             <h2 className="text-base md:text-lg font-medium font-times uppercase tracking-wide">
-                              {item.name}
+                              {item.name
+                                ? item.name
+                                : item.productId
+                                ? `Product ${String(item.productId).slice(
+                                    0,
+                                    6
+                                  )}`
+                                : "Product"}
                             </h2>
 
                             {/* MOBILE PRICE */}
-                            <p className="lg:hidden mt-2 text-sm">Rs. {item.price.toFixed(2)}</p>
+                            <p className="lg:hidden mt-2 text-sm">
+                              Rs. {Number(item.price).toFixed(2)}
+                            </p>
 
                             {/* MOBILE QUANTITY */}
                             <div className="lg:hidden mt-4">
                               <QuantityControl
                                 quantity={item.quantity}
                                 onIncrease={() =>
-                                  updateQuantity.mutate({ cartItemId: item.id, quantity: item.quantity + 1 })
+                                  updateQuantity.mutate({
+                                    cartItemId: item.id,
+                                    quantity: item.quantity + 1,
+                                  })
                                 }
                                 onDecrease={() =>
                                   updateQuantity.mutate({
@@ -136,7 +156,9 @@ export default function CartPage() {
                               className="mt-2 md:mt-0 text-sm cursor-pointer underline-offset-2 text-foreground/70 underline hover:text-foreground w-fit"
                               disabled={removeFromCart.isPending}
                             >
-                              {removeFromCart.isPending ? "Removing..." : "Remove"}
+                              {removeFromCart.isPending
+                                ? "Removing..."
+                                : "Remove"}
                             </button>
                           </div>
                         </div>
@@ -146,17 +168,26 @@ export default function CartPage() {
                           <QuantityControl
                             quantity={item.quantity}
                             onIncrease={() =>
-                              updateQuantity.mutate({ cartItemId: item.id, quantity: item.quantity + 1 })
+                              updateQuantity.mutate({
+                                cartItemId: item.id,
+                                quantity: item.quantity + 1,
+                              })
                             }
                             onDecrease={() =>
-                              updateQuantity.mutate({ cartItemId: item.id, quantity: Math.max(1, item.quantity - 1) })
+                              updateQuantity.mutate({
+                                cartItemId: item.id,
+                                quantity: Math.max(1, item.quantity - 1),
+                              })
                             }
                           />
                         </div>
 
                         {/* DESKTOP TOTAL */}
                         <div className="hidden lg:flex justify-end items-center font-medium">
-                          Rs. {(item.price * item.quantity).toFixed(2)}
+                          Rs.{" "}
+                          {(Number(item.price) * Number(item.quantity)).toFixed(
+                            2
+                          )}
                         </div>
                       </div>
                     ))}
@@ -234,9 +265,12 @@ export default function CartPage() {
           </section>
         )}
       </div>
-      <LoginToContinueModal open={openLogin} onClose={() => setOpenLogin(false)} />
+      <LoginToContinueModal
+        open={openLogin}
+        onClose={() => setOpenLogin(false)}
+      />
     </>
-  )
+  );
 }
 
 /* ================= Quantity Control ================= */
@@ -246,19 +280,25 @@ function QuantityControl({
   onIncrease,
   onDecrease,
 }: {
-  quantity: number
-  onIncrease?: () => void
-  onDecrease?: () => void
+  quantity: number;
+  onIncrease?: () => void;
+  onDecrease?: () => void;
 }) {
   return (
     <div className="flex items-center border border-foreground/20 w-fit">
-      <button onClick={onDecrease} className="px-2 md:px-4 py-1 md:py-2 text-lg">
+      <button
+        onClick={onDecrease}
+        className="px-2 md:px-4 py-1 md:py-2 text-lg"
+      >
         −
       </button>
       <span className="px-4 md:px-6">{quantity}</span>
-      <button onClick={onIncrease} className="px-2 md:px-4 py-1 md:py-2 text-lg">
+      <button
+        onClick={onIncrease}
+        className="px-2 md:px-4 py-1 md:py-2 text-lg"
+      >
         +
       </button>
     </div>
-  )
+  );
 }

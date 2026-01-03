@@ -1,149 +1,84 @@
-export interface WishlistItem {
-  id: string
-  productId: string
-  title: string
-  price: string
-  image: string
-}
+// Local-only wishlist service with typed exports
+export type WishlistItem = {
+  id: string;
+  productId: string;
+  title: string;
+  price: string;
+  image: string;
+};
 
-export interface Wishlist {
-  items: WishlistItem[]
-}
+export type Wishlist = {
+  items: WishlistItem[];
+};
 
-// Backend wishlist item structure
-interface BackendWishlistItem {
-  _id: string
-  productId: {
-    _id: string
-    name: string
-    price: number
-    thumbnail: string
-    images?: string[]
-  } | string
-}
+export type ProductLike = {
+  productId: string;
+  title: string;
+  price: string;
+  image: string;
+};
 
-// Backend wishlist response
-interface BackendWishlist {
-  _id: string
-  customerId: string
-  items: BackendWishlistItem[]
-}
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8018'
-
-import { formatPrice } from "@/lib/api-utils"
-
-/**
- * Transform backend wishlist item to frontend format
- */
-const transformWishlistItem = (backendItem: BackendWishlistItem): WishlistItem => {
-  // Handle populated productId (object) vs string reference
-  const product = typeof backendItem.productId === 'object' ? backendItem.productId : null
-  
-  return {
-    id: backendItem._id,
-    productId: product?._id || (typeof backendItem.productId === 'string' ? backendItem.productId : ''),
-    title: product?.name || 'Product',
-    price: formatPrice(product?.price || 0),
-    image: product?.thumbnail || product?.images?.[0] || '/img/placeholder.webp',
+const getDeviceId = (): string => {
+  const key = "deviceId";
+  if (typeof window === "undefined") return key;
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = `device-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+    try {
+      localStorage.setItem(key, id);
+    } catch {}
   }
-}
+  return id;
+};
 
-/**
- * Fetch user's wishlist
- */
-export const fetchWishlist = async (): Promise<Wishlist> => {
-  const url = `${API_BASE_URL}/api/v1/wishlist`
+const localKey = () => `wishlist:${getDeviceId()}`;
 
-  try {
-    const response = await fetch(url)
-    
-    if (!response.ok) {
-      // If wishlist not found (404), return empty wishlist
-      if (response.status === 404) {
-        return { items: [] }
-      }
-      throw new Error(`Failed to fetch wishlist: ${response.status}`)
-    }
+export const getWishlist = async (): Promise<Wishlist> => {
+  const raw =
+    typeof window !== "undefined" ? localStorage.getItem(localKey()) : null;
+  return raw ? (JSON.parse(raw) as Wishlist) : { items: [] };
+};
 
-    const responseData = await response.json()
-    
-    // Extract wishlist from response: { success: true, data: { wishlist: {...} } }
-    const backendWishlist: BackendWishlist | null = responseData.data?.wishlist || responseData.data || null
-    
-    if (!backendWishlist || !Array.isArray(backendWishlist.items)) {
-      return { items: [] }
-    }
-
-    const items = backendWishlist.items.map(transformWishlistItem)
-    
-    return { items }
-  } catch (error) {
-    console.error('Error fetching wishlist:', error)
-    return { items: [] }
-  }
-}
-
-/**
- * Add item to wishlist
- */
-export const addToWishlist = async (
-  productId: string,
-  title: string,
-  price: string,
-  image: string,
+export const addWishlistItem = async (
+  product: ProductLike
 ): Promise<Wishlist> => {
-  const url = `${API_BASE_URL}/api/v1/wishlist/items`
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      productId,
-    }),
-  })
-
-  if (!response.ok) {
-    throw new Error(`Failed to add to wishlist: ${response.status}`)
+  const raw =
+    typeof window !== "undefined" ? localStorage.getItem(localKey()) : null;
+  const wl: Wishlist = raw ? JSON.parse(raw) : { items: [] };
+  if (!wl.items.some((i) => i.productId === product.productId)) {
+    wl.items.push({
+      id: product.productId,
+      productId: product.productId,
+      title: product.title,
+      price: product.price,
+      image: product.image,
+    });
+    try {
+      localStorage.setItem(localKey(), JSON.stringify(wl));
+    } catch {}
   }
+  return wl;
+};
 
-  const responseData = await response.json()
-  const backendWishlist: BackendWishlist = responseData.data?.wishlist || responseData.data
-  
-  if (!backendWishlist || !Array.isArray(backendWishlist.items)) {
-    throw new Error('Invalid wishlist response')
-  }
+export const removeWishlistItem = async (
+  idOrProductId: string
+): Promise<Wishlist> => {
+  const raw =
+    typeof window !== "undefined" ? localStorage.getItem(localKey()) : null;
+  const wl: Wishlist = raw ? JSON.parse(raw) : { items: [] };
+  wl.items = wl.items.filter(
+    (i) => i.id !== idOrProductId && i.productId !== idOrProductId
+  );
+  try {
+    localStorage.setItem(localKey(), JSON.stringify(wl));
+  } catch {}
+  return wl;
+};
 
-  const items = backendWishlist.items.map(transformWishlistItem)
-  
-  return { items }
-}
-
-/**
- * Remove item from wishlist
- */
-export const removeFromWishlist = async (wishlistItemId: string): Promise<Wishlist> => {
-  const url = `${API_BASE_URL}/api/v1/wishlist/items/${wishlistItemId}`
-
-  const response = await fetch(url, {
-    method: 'DELETE',
-  })
-
-  if (!response.ok) {
-    throw new Error(`Failed to remove from wishlist: ${response.status}`)
-  }
-
-  const responseData = await response.json()
-  const backendWishlist: BackendWishlist | null = responseData.data?.wishlist || responseData.data || null
-  
-  // If wishlist is empty after deletion, return empty wishlist
-  if (!backendWishlist || !Array.isArray(backendWishlist.items)) {
-    return { items: [] }
-  }
-
-  const items = backendWishlist.items.map(transformWishlistItem)
-  
-  return { items }
-}
+export const clearWishlist = async (): Promise<Wishlist> => {
+  const wl: Wishlist = { items: [] };
+  try {
+    localStorage.setItem(localKey(), JSON.stringify(wl));
+  } catch {}
+  return wl;
+};

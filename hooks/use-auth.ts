@@ -1,68 +1,72 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  loginUser,
   fetchUserProfile,
   updateUserProfile,
   type User,
-  type LoginCredentials,
-} from "@/services/auth-service"
+} from "@/services/auth-service";
+import { useRouter } from "next/navigation";
 
-export const useLogin = () => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (credentials: LoginCredentials) => loginUser(credentials),
-    onSuccess: (data) => {
-      // Store token in localStorage for persistence
-      localStorage.setItem("auth-token", data.token)
-      // Set user in cache immediately (optimistic update)
-      queryClient.setQueryData(["user", "profile"], data.user)
-    },
-  })
-}
-
-export const useUserProfile = (enabled = true) => {
-  return useQuery({
-    queryKey: ["user", "profile"],
+// Current user (guest when unauthenticated)
+export const useAuth = () => {
+  return useQuery<User>({
+    queryKey: ["auth", "me"],
     queryFn: fetchUserProfile,
-    enabled, // Only fetch if user is authenticated
-    staleTime: 1000 * 60 * 10, // 10 minutes
-  })
-}
+    staleTime: 1000 * 60 * 5,
+    retry: 0,
+    placeholderData: (prev) => prev,
+  });
+};
 
-export const useUpdateProfile = () => {
-  const queryClient = useQueryClient()
+// Alias to support existing imports
+export { useAuth as useUserProfile };
 
-  return useMutation({
-    mutationFn: (user: Partial<User>) => updateUserProfile(user),
-    onSuccess: (data) => {
-      queryClient.setQueryData(["user", "profile"], data)
-      queryClient.invalidateQueries({ queryKey: ["user", "profile"] })
-    },
-  })
-}
+// Auth helpers
+export const isAuthenticated = (user?: User): boolean =>
+  !!user && user.id !== "guest";
 
+// Logout mutation
 export const useLogout = () => {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
+  const router = useRouter();
 
   return useMutation({
     mutationFn: async () => {
-      // Placeholder for logout API call
-      return Promise.resolve()
+      try {
+        localStorage.removeItem("authToken");
+      } catch {}
+      return true;
     },
     onSuccess: () => {
-      localStorage.removeItem("auth-token")
-      queryClient.removeQueries({ queryKey: ["user", "profile"] })
-      queryClient.removeQueries({ queryKey: ["cart"] })
-      queryClient.removeQueries({ queryKey: ["wishlist"] })
-      queryClient.removeQueries({ queryKey: ["orders"] })
+      queryClient.setQueryData<User>(["auth", "me"], {
+        id: "guest",
+        name: "",
+        email: "",
+        phone: "",
+        addresses: [],
+      });
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      queryClient.invalidateQueries({ queryKey: ["orders", "list"] });
+      router.push("/");
     },
-  })
-}
+  });
+};
 
-export const isAuthenticated = () => {
-  if (typeof window !== "undefined") {
-    return !!localStorage.getItem("auth-token")
-  }
-  return false
-}
+// Update profile mutation (PUT /customers/me)
+export const useUpdateProfile = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (
+      payload: Partial<{ name: string; email: string; phone: string }>
+    ) => {
+      return updateUserProfile(payload);
+    },
+    onSuccess: (user) => {
+      // Refresh cached profile
+      queryClient.setQueryData<User>(["auth", "me"], user);
+    },
+  });
+};

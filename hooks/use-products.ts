@@ -1,12 +1,36 @@
-import { useQuery } from "@tanstack/react-query"
-import { fetchProducts, type ProductFilters, type ProductListResponse } from "@/services/product-service"
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import {
+  fetchProducts,
+  type ProductFilters,
+  type ProductListResponse,
+} from "@/services/product-service";
 
 export const useProducts = (filters: ProductFilters = {}) => {
   return useQuery<ProductListResponse, Error>({
     queryKey: ["products", "list", filters],
     queryFn: () => fetchProducts(filters),
-    staleTime: 1000 * 60 * 5, // 5 minutes - prevents unnecessary refetches
-    placeholderData: (previousData) => previousData, // Smooth transitions
-    retry: 2, // Retry failed requests
-  })
-}
+    staleTime: 1000 * 60 * 5,
+    placeholderData: (previousData) => previousData,
+    retry: 2,
+  });
+};
+
+// Infinite pagination for "Load More"
+export const useProductsInfinite = (
+  filters: Omit<ProductFilters, "page" | "limit"> = {}
+) => {
+  return useInfiniteQuery<ProductListResponse, Error>({
+    queryKey: ["products", "infinite", filters],
+    queryFn: ({ pageParam }) =>
+      fetchProducts({ ...filters, page: pageParam as number }),
+    initialPageParam: 1, // required for TS and pagination start
+    getNextPageParam: (lastPage) => {
+      const current = lastPage?.meta?.currentPage ?? 1;
+      const totalPages = lastPage?.meta?.totalPages ?? 1;
+      const next = current + 1;
+      return next <= totalPages ? next : undefined;
+    },
+    staleTime: 1000 * 60 * 5,
+    retry: 2,
+  });
+};

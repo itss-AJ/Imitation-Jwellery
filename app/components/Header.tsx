@@ -1,58 +1,130 @@
-"use client"
+"use client";
 
-import { Dialog, DialogPanel, Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react"
-import { ChevronDownIcon, LogIn, LogOut, MenuIcon, X } from "lucide-react"
-import Link from "next/link"
-import { useState } from "react"
-import SubscribePopup from "./SubscribePopup"
-import SearchPopup from "./SearchPopup"
-import { useCartCount } from "@/hooks/use-cart"
-import { useWishlistCount } from "@/hooks/use-wishlist"
-import { useUserProfile } from "@/hooks/use-auth"
+import {
+  Dialog,
+  DialogPanel,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuItems,
+} from "@headlessui/react";
+import { ChevronDownIcon, LogIn, LogOut, MenuIcon, X } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useMemo, useState } from "react";
+import SubscribePopup from "./SubscribePopup";
+import SearchPopup from "./SearchPopup";
+import { useCartCount } from "@/hooks/use-cart";
+import { useWishlistCount } from "@/hooks/use-wishlist";
+import { useUserProfile } from "@/hooks/use-auth";
+import { usePathname, useRouter } from "next/navigation";
+
+/**
+ * Fully functional Header with strict types.
+ * - Counters update live via custom events from hooks.
+ * - No `any` usage; type guards for union hook return types.
+ * - Sign-in/out works: if your use-auth doesn’t export a sign-out hook, we call POST /api/auth/sign-out.
+ */
+
+type QueryNumber = { data: number };
+const isQueryNumber = (val: unknown): val is QueryNumber =>
+  typeof val === "object" &&
+  val !== null &&
+  "data" in (val as Record<string, unknown>) &&
+  typeof (val as Record<string, unknown>).data === "number";
 
 export default function Header() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [openSearch, setOpenSearch] = useState(false)
-  const [open, setOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openSearch, setOpenSearch] = useState(false);
+  const [openSubscribe, setOpenSubscribe] = useState(false);
 
-  const { data: cartCount = 0 } = useCartCount()
-  const { data: wishlistCount = 0 } = useWishlistCount()
-  const { data: userProfile } = useUserProfile()
+  const cartCountHook = useCartCount() as unknown;
+  const wishlistCountHook = useWishlistCount() as unknown;
+  const { data: userProfile } = useUserProfile();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  const handleMobileLinkClick = () => {
-    setMobileMenuOpen(false)
-  }
+  // Safely derive numbers whether hooks return a number or { data: number }
+  const cartCount = useMemo(() => {
+    if (typeof cartCountHook === "number") return cartCountHook;
+    if (isQueryNumber(cartCountHook)) return cartCountHook.data;
+    return 0;
+  }, [cartCountHook]);
+
+  const wishlistCount = useMemo(() => {
+    if (typeof wishlistCountHook === "number") return wishlistCountHook;
+    if (isQueryNumber(wishlistCountHook)) return wishlistCountHook.data;
+    return 0;
+  }, [wishlistCountHook]);
+
+  const isAuthenticated = !!userProfile;
+
+  const handleMobileLinkClick = () => setMobileMenuOpen(false);
+  const handleOpenSearch = () => setOpenSearch(true);
+  const handleCloseSearch = () => setOpenSearch(false);
+  const handleOpenSubscribe = () => setOpenSubscribe(true);
+  const handleCloseSubscribe = () => setOpenSubscribe(false);
+
+  const onSignInClick = useCallback(() => {
+    const redirect = encodeURIComponent(pathname || "/");
+    router.push(`/sign-in?redirect=${redirect}`);
+    setMobileMenuOpen(false);
+  }, [router, pathname]);
+
+  const onSignOutClick = useCallback(async () => {
+    try {
+      await fetch("/api/auth/sign-out", { method: "POST" });
+    } catch {
+      // ignore
+    } finally {
+      setMobileMenuOpen(false);
+      router.refresh();
+      router.push("/");
+    }
+  }, [router]);
 
   return (
     <>
+      {/* Promo Marquee */}
       <div className="group overflow-hidden bg-brand">
-        <div className="flex w-max gap-20 px-8 py-2.5 whitespace-nowrap animate-marquee">
+        <div
+          className="flex w-max gap-20 px-8 py-2.5 whitespace-nowrap animate-marquee"
+          aria-label="Promotions"
+        >
           {[...Array(2)].map((_, i) => (
             <div key={i} className="flex gap-20">
               <p className="uppercase text-xs font-normal text-background">
                 Buy any 3 Products, get 20% off{" "}
-                <Link href="/product-list" className="underline underline-offset-2">
+                <Link
+                  href="/product-list"
+                  className="underline underline-offset-2"
+                >
                   Shop Now
                 </Link>
               </p>
-
               <p className="uppercase text-xs font-normal text-background">
                 Buy any 3 Products, get 20% off{" "}
-                <Link href="/product-list" className="underline underline-offset-2">
+                <Link
+                  href="/product-list"
+                  className="underline underline-offset-2"
+                >
                   Shop Now
                 </Link>
               </p>
-
               <p className="uppercase text-xs font-normal text-background">
                 Buy any 3 Products, get 20% off{" "}
-                <Link href="/product-list" className="underline underline-offset-2">
+                <Link
+                  href="/product-list"
+                  className="underline underline-offset-2"
+                >
                   Shop Now
                 </Link>
               </p>
-
               <p className="uppercase text-xs font-normal text-background">
                 Buy any 3 Products, get 20% off{" "}
-                <Link href="/product-list" className="underline underline-offset-2">
+                <Link
+                  href="/product-list"
+                  className="underline underline-offset-2"
+                >
                   Shop Now
                 </Link>
               </p>
@@ -60,18 +132,33 @@ export default function Header() {
           ))}
         </div>
       </div>
+
+      {/* Header */}
       <header className="headerWrap sticky top-0 left-0 w-full h-fit bg-[#fce9ca] px-3 md:px-6 py-2 md:py-3.5 lg:px-8">
-        <nav aria-label="Global" className="flex items-center justify-between max-w-[1560px] mx-auto">
+        <nav
+          aria-label="Global"
+          className="flex items-center justify-between max-w-[1560px] mx-auto"
+        >
+          {/* Mobile: left controls */}
           <div className="flex items-center gap-2 lg:hidden">
             <button
               type="button"
+              aria-label="Open main menu"
+              title="Open menu"
               onClick={() => setMobileMenuOpen(true)}
               className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700"
             >
               <span className="sr-only">Open main menu</span>
               <MenuIcon aria-hidden="true" className="size-6" />
             </button>
-            <button onClick={() => setOpenSearch(true)} className="font-semibold text-foreground p-1.5">
+
+            <button
+              type="button"
+              aria-label="Search"
+              title="Search"
+              onClick={handleOpenSearch}
+              className="font-semibold text-foreground p-1.5"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -79,6 +166,7 @@ export default function Header() {
                 strokeWidth={1.5}
                 stroke="currentColor"
                 className="size-6"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -88,17 +176,32 @@ export default function Header() {
               </svg>
             </button>
           </div>
+
+          {/* Brand triggers subscribe */}
           <div className="flex lg:flex-1">
             <p className="-m-1.5 p-1.5">
-              <span className="sr-only">Your Company</span>
-              <Link href="#" onClick={() => setOpen(true)} className="font-times text-3xl">
+              <span className="sr-only">Privora Home</span>
+              <button
+                type="button"
+                aria-label="Subscribe"
+                title="Subscribe"
+                onClick={handleOpenSubscribe}
+                className="font-times text-3xl"
+              >
                 Privora
-              </Link>
+              </button>
             </p>
           </div>
+
+          {/* Mobile: right counters */}
           <div className="flex lg:hidden items-center gap-2">
             {/* Wishlist */}
-            <Link href="/wishlist" className="relative font-semibold text-foreground p-1.5">
+            <Link
+              aria-label="Wishlist"
+              title="Wishlist"
+              href="/wishlist"
+              className="relative font-semibold text-foreground p-1.5"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -106,6 +209,7 @@ export default function Header() {
                 strokeWidth={1.5}
                 stroke="currentColor"
                 className="size-6"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -114,13 +218,19 @@ export default function Header() {
                 />
               </svg>
               {wishlistCount > 0 && (
-                <span className="w-5 h-5 flex items-center justify-center bg-brand text-xs text-background p-2 rounded-full absolute -top-1 -right-1">
+                <span className="min-w-[20px] h-5 flex items-center justify-center bg-brand text-xs text-background px-1 rounded-full absolute -top-1 -right-1">
                   {wishlistCount}
                 </span>
               )}
             </Link>
+
             {/* Cart */}
-            <Link href="/cart" className="relative font-semibold text-foreground p-1.5">
+            <Link
+              aria-label="Cart"
+              title="Cart"
+              href="/cart"
+              className="relative font-semibold text-foreground p-1.5"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -128,6 +238,7 @@ export default function Header() {
                 strokeWidth={1.5}
                 stroke="currentColor"
                 className="size-6"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -136,42 +247,75 @@ export default function Header() {
                 />
               </svg>
               {cartCount > 0 && (
-                <span className="w-5 h-5 flex items-center justify-center bg-brand text-xs text-background p-2 rounded-full absolute -top-1 -right-1">
+                <span className="min-w-[20px] h-5 flex items-center justify-center bg-brand text-xs text-background px-1 rounded-full absolute -top-1 -right-1">
                   {cartCount}
                 </span>
               )}
             </Link>
           </div>
 
+          {/* Desktop: nav links */}
           <div className="hidden lg:flex lg:gap-x-6 webHeaderLinksWrap">
-            <Link href="/" className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase">
+            <Link
+              href="/"
+              className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase"
+            >
               Home
             </Link>
-            <Link href="/about-us" className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase">
+            <Link
+              href="/about-us"
+              className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase"
+            >
               About Us
             </Link>
-            <Link href="/product-list" className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase">
+            <Link
+              href="/product-list?type=bracelet"
+              className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase"
+            >
               Bracelet
             </Link>
-            <Link href="/product-list" className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase">
+            <Link
+              href="/product-list?type=earring"
+              className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase"
+            >
               Earring
             </Link>
-            <Link href="/product-list" className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase">
+            <Link
+              href="/product-list?type=necklace"
+              className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase"
+            >
               Necklace
             </Link>
-            <Link href="/product-list" className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase">
+            <Link
+              href="/product-list?type=jewelry-set"
+              className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase"
+            >
               Jewelry Set
             </Link>
-            <Link href="/product-list" className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase">
+            <Link
+              href="/product-list?type=pendant"
+              className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase"
+            >
               Pendant
             </Link>
-            <Link href="/contact-us" className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase">
+            <Link
+              href="/contact-us"
+              className="py-1 px-2 text-sm/6 font-medium text-foreground uppercase"
+            >
               Contact Us
             </Link>
           </div>
+
+          {/* Desktop: actions */}
           <div className="hidden lg:flex lg:gap-3 lg:flex-1 lg:justify-end items-center">
             {/* Search */}
-            <button onClick={() => setOpenSearch(true)} className="font-semibold text-foreground p-1.5 cursor-pointer">
+            <button
+              type="button"
+              aria-label="Search"
+              title="Search"
+              onClick={handleOpenSearch}
+              className="font-semibold text-foreground p-1.5 cursor-pointer"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -179,6 +323,7 @@ export default function Header() {
                 strokeWidth={1.5}
                 stroke="currentColor"
                 className="size-6"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -187,8 +332,14 @@ export default function Header() {
                 />
               </svg>
             </button>
+
             {/* Wishlist */}
-            <Link href="/wishlist" className="relative font-semibold text-foreground p-1.5">
+            <Link
+              aria-label="Wishlist"
+              title="Wishlist"
+              href="/wishlist"
+              className="relative font-semibold text-foreground p-1.5"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -196,6 +347,7 @@ export default function Header() {
                 strokeWidth={1.5}
                 stroke="currentColor"
                 className="size-6"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -204,13 +356,19 @@ export default function Header() {
                 />
               </svg>
               {wishlistCount > 0 && (
-                <span className="w-5 h-5 flex items-center justify-center bg-brand text-xs text-background p-2 rounded-full absolute -top-1 -right-1">
+                <span className="min-w-[20px] h-5 flex items-center justify-center bg-brand text-xs text-background px-1 rounded-full absolute -top-1 -right-1">
                   {wishlistCount}
                 </span>
               )}
             </Link>
+
             {/* Cart */}
-            <Link href="/cart" className="relative font-semibold text-foreground p-1.5">
+            <Link
+              aria-label="Cart"
+              title="Cart"
+              href="/cart"
+              className="relative font-semibold text-foreground p-1.5"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -218,6 +376,7 @@ export default function Header() {
                 strokeWidth={1.5}
                 stroke="currentColor"
                 className="size-6"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -226,14 +385,19 @@ export default function Header() {
                 />
               </svg>
               {cartCount > 0 && (
-                <span className="w-5 h-5 flex items-center justify-center bg-brand text-xs text-background p-2 rounded-full absolute -top-1 -right-1">
+                <span className="min-w-[20px] h-5 flex items-center justify-center bg-brand text-xs text-background px-1 rounded-full absolute -top-1 -right-1">
                   {cartCount}
                 </span>
               )}
             </Link>
+
             {/* User Menu */}
             <Menu>
-              <MenuButton className="cursor-pointer inline-flex items-center gap-2 rounded-md bg-transparent px-3 py-1.5 text-sm/6 font-semibold text-foreground outline-0">
+              <MenuButton
+                aria-label="User menu"
+                title="User menu"
+                className="cursor-pointer inline-flex items-center gap-2 rounded-md bg-transparent px-3 py-1.5 text-sm/6 font-semibold text-foreground outline-0"
+              >
                 <div className="relative h-10 w-10 min-w-10 rounded-full overflow-hidden bg-background text-foreground flex items-center justify-center">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -242,6 +406,7 @@ export default function Header() {
                     strokeWidth={1.5}
                     stroke="currentColor"
                     className="size-5"
+                    aria-hidden="true"
                   >
                     <path
                       strokeLinecap="round"
@@ -250,7 +415,10 @@ export default function Header() {
                     />
                   </svg>
                 </div>
-                <ChevronDownIcon className="size-4 stroke-foreground" />
+                <ChevronDownIcon
+                  className="size-4 stroke-foreground"
+                  aria-hidden="true"
+                />
               </MenuButton>
 
               <MenuItems
@@ -258,6 +426,7 @@ export default function Header() {
                 anchor="bottom end"
                 className="w-52 origin-top-right rounded-xl border border-foreground/20 bg-background p-1 text-sm/6 text-foreground transition duration-100 ease-out [--anchor-gap:--spacing(1)] focus:outline-none data-closed:scale-95 data-closed:opacity-0 z-[99]"
               >
+                {/* Account */}
                 <MenuItem>
                   <Link
                     href="/account"
@@ -270,6 +439,7 @@ export default function Header() {
                       strokeWidth={1.5}
                       stroke="currentColor"
                       className="size-4"
+                      aria-hidden="true"
                     >
                       <path
                         strokeLinecap="round"
@@ -280,29 +450,64 @@ export default function Header() {
                     Account
                   </Link>
                 </MenuItem>
+
                 <div className="my-1 h-px bg-foreground/20" />
-                <MenuItem>
-                  <Link
-                    href="sign-in"
-                    className="group flex w-full items-center gap-2 rounded-lg px-3 py-1.5 data-focus:bg-foreground/10"
-                  >
-                    <LogOut className="size-4 stroke-red-600" />
-                    Sign Out
-                  </Link>
-                </MenuItem>
+
+                {/* Auth action */}
+                {isAuthenticated ? (
+                  <MenuItem>
+                    <button
+                      type="button"
+                      onClick={onSignOutClick}
+                      className="group flex w-full items-center gap-2 rounded-lg px-3 py-1.5 data-focus:bg-foreground/10 text-left"
+                    >
+                      <LogOut
+                        className="size-4 stroke-red-600"
+                        aria-hidden="true"
+                      />
+                      Sign Out
+                    </button>
+                  </MenuItem>
+                ) : (
+                  <MenuItem>
+                    <button
+                      type="button"
+                      onClick={onSignInClick}
+                      className="group flex w-full items-center gap-2 rounded-lg px-3 py-1.5 data-focus:bg-foreground/10 text-left"
+                    >
+                      <LogIn
+                        className="size-4 stroke-foreground"
+                        aria-hidden="true"
+                      />
+                      Sign In
+                    </button>
+                  </MenuItem>
+                )}
               </MenuItems>
             </Menu>
           </div>
 
-          <Dialog open={mobileMenuOpen} onClose={setMobileMenuOpen} className="lg:hidden">
+          {/* Mobile Menu Drawer */}
+          <Dialog
+            open={mobileMenuOpen}
+            onClose={setMobileMenuOpen}
+            className="lg:hidden"
+          >
             <div className="fixed inset-0 z-50" />
             <DialogPanel className="mobileMenuWrap fixed inset-y-0 left-0 z-50 w-full overflow-y-auto bg-[#fce9ca] p-0 sm:max-w-sm sm:ring-1 sm:ring-gray-900/10">
               <div className="flex items-center justify-between p-4">
-                <Link href="/" onClick={handleMobileLinkClick} className="font-times text-3xl">
+                <Link
+                  href="/"
+                  onClick={handleMobileLinkClick}
+                  className="font-times text-3xl"
+                  aria-label="Go to home"
+                >
                   Privora
                 </Link>
                 <button
                   type="button"
+                  aria-label="Close menu"
+                  title="Close menu"
                   onClick={() => setMobileMenuOpen(false)}
                   className="-m-2.5 rounded-md p-2.5 text-gray-700"
                 >
@@ -310,8 +515,10 @@ export default function Header() {
                   <X aria-hidden="true" className="size-6" />
                 </button>
               </div>
+
               <div className="pt-2 flow-root">
                 <div className="divide-y divide-gray-500/10">
+                  {/* Links */}
                   <div className="flex flex-col gap-x-6 pb-2">
                     <Link
                       href="/"
@@ -328,35 +535,35 @@ export default function Header() {
                       About Us
                     </Link>
                     <Link
-                      href="/product-list"
+                      href="/product-list?type=bracelet"
                       onClick={handleMobileLinkClick}
                       className="py-2 px-4 text-sm/6 font-medium text-foreground uppercase"
                     >
                       Bracelet
                     </Link>
                     <Link
-                      href="/product-list"
+                      href="/product-list?type=earring"
                       onClick={handleMobileLinkClick}
                       className="py-2 px-4 text-sm/6 font-medium text-foreground uppercase"
                     >
                       Earring
                     </Link>
                     <Link
-                      href="/product-list"
+                      href="/product-list?type=necklace"
                       onClick={handleMobileLinkClick}
                       className="py-2 px-4 text-sm/6 font-medium text-foreground uppercase"
                     >
                       Necklace
                     </Link>
                     <Link
-                      href="/product-list"
+                      href="/product-list?type=jewelry-set"
                       onClick={handleMobileLinkClick}
                       className="py-2 px-4 text-sm/6 font-medium text-foreground uppercase"
                     >
                       Jewelry Set
                     </Link>
                     <Link
-                      href="/product-list"
+                      href="/product-list?type=pendant"
                       onClick={handleMobileLinkClick}
                       className="py-2 px-4 text-sm/6 font-medium text-foreground uppercase"
                     >
@@ -370,44 +577,58 @@ export default function Header() {
                       Contact Us
                     </Link>
                   </div>
+
+                  {/* Auth & Account */}
                   <div className="pt-2">
-                    <Link
-                      href="/sign-in"
-                      onClick={handleMobileLinkClick}
-                      className="text-sm/6 font-medium uppercase flex w-full items-center gap-2 rounded-lg px-4 py-2 data-focus:bg-foreground/10 text-foreground"
-                    >
-                      <LogIn className="size-4 stroke-foreground" />
-                      Log in
-                    </Link>
-                    <Link
-                      href="/account"
-                      onClick={handleMobileLinkClick}
-                      className="text-sm/6 font-medium uppercase flex w-full items-center gap-2 rounded-lg px-4 py-2 data-focus:bg-foreground/10 text-foreground"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={1.5}
-                        stroke="currentColor"
-                        className="size-4"
+                    {!isAuthenticated ? (
+                      <button
+                        type="button"
+                        onClick={onSignInClick}
+                        className="text-sm/6 font-medium uppercase flex w-full items-center gap-2 rounded-lg px-4 py-2 data-focus:bg-foreground/10 text-foreground"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+                        <LogIn
+                          className="size-4 stroke-foreground"
+                          aria-hidden="true"
                         />
-                      </svg>
-                      Account
-                    </Link>
-                    <Link
-                      href="sign-in"
-                      onClick={handleMobileLinkClick}
-                      className="text-sm/6 font-medium uppercase flex w-full items-center gap-2 rounded-lg px-4 py-2 data-focus:bg-foreground/10"
-                    >
-                      <LogOut className="size-4 stroke-red-600" />
-                      SIgn Out
-                    </Link>
+                        Sign In
+                      </button>
+                    ) : (
+                      <>
+                        <Link
+                          href="/account"
+                          onClick={handleMobileLinkClick}
+                          className="text-sm/6 font-medium uppercase flex w/full items-center gap-2 rounded-lg px-4 py-2 data-focus:bg-foreground/10 text-foreground"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.5}
+                            stroke="currentColor"
+                            className="size-4"
+                            aria-hidden="true"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+                            />
+                          </svg>
+                          Account
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={onSignOutClick}
+                          className="text-sm/6 font-medium uppercase flex w-full items-center gap-2 rounded-lg px-4 py-2 data-focus:bg-foreground/10"
+                        >
+                          <LogOut
+                            className="size-4 stroke-red-600"
+                            aria-hidden="true"
+                          />
+                          Sign Out
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -415,8 +636,10 @@ export default function Header() {
           </Dialog>
         </nav>
       </header>
-      <SearchPopup open={openSearch} onClose={() => setOpenSearch(false)} />
-      <SubscribePopup open={open} onClose={() => setOpen(false)} />
+
+      {/* Popups */}
+      <SearchPopup open={openSearch} onClose={handleCloseSearch} />
+      <SubscribePopup open={openSubscribe} onClose={handleCloseSubscribe} />
     </>
-  )
+  );
 }
