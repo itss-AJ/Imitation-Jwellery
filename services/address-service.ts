@@ -4,7 +4,8 @@ import { parseAddressToBackend } from "@/lib/api-utils";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8018";
 
 type BackendAddressPayload = {
-  name?: string;
+  label?: string; // added label
+  fullName?: string; // use fullName instead of name for backend
   line1?: string;
   line2?: string;
   city?: string;
@@ -34,8 +35,10 @@ export const addAddress = async (
 ): Promise<User> => {
   const customerId = await getCurrentCustomerId();
 
-  const body: BackendAddressPayload = {};
-  if (addressData.name) body.name = addressData.name;
+  const body: BackendAddressPayload = {
+    label: "Home",
+    fullName: addressData.name,
+  };
 
   if (addressData.address || addressData.cityZip) {
     const parsed = parseAddressToBackend(
@@ -71,7 +74,7 @@ export const updateAddress = async (
   const url = `${API_BASE_URL}/api/v1/customers/${customerId}/addresses/${addressId}`;
 
   const body: BackendAddressPayload = {};
-  if (addressData.name) body.name = addressData.name;
+  if (addressData.name) body.fullName = addressData.name;
 
   if (addressData.address && addressData.cityZip) {
     const parsed = parseAddressToBackend(
@@ -95,7 +98,7 @@ export const updateAddress = async (
   }
 
   const response = await fetch(url, {
-    method: "PUT",
+    method: "PUT", // use PUT as per backend route
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });

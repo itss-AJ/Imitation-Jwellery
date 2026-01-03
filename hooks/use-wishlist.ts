@@ -10,9 +10,6 @@ import {
   type ProductLike,
 } from "@/services/wishlist-service";
 
-/* =======================
-   Base wishlist query
-======================= */
 
 export const useWishlist = () => {
   return useQuery<Wishlist>({
@@ -24,9 +21,7 @@ export const useWishlist = () => {
   });
 };
 
-/* =======================
-   Wishlist count
-======================= */
+
 
 export const useWishlistCount = () => {
   const queryClient = useQueryClient();
@@ -34,9 +29,7 @@ export const useWishlistCount = () => {
   return data?.items.length ?? 0;
 };
 
-/* =======================
-   Check wishlisted
-======================= */
+
 
 export const useIsWishlisted = (productId: string) => {
   const queryClient = useQueryClient();
@@ -49,9 +42,6 @@ export const useIsWishlisted = (productId: string) => {
   return { isWishlisted };
 };
 
-/* =======================
-   Add to wishlist
-======================= */
 
 export const useAddToWishlist = () => {
   const queryClient = useQueryClient();
@@ -100,9 +90,6 @@ export const useAddToWishlist = () => {
   });
 };
 
-/* =======================
-   Remove from wishlist
-======================= */
 
 export const useRemoveFromWishlist = () => {
   const queryClient = useQueryClient();
@@ -139,9 +126,6 @@ export const useRemoveFromWishlist = () => {
   });
 };
 
-/* =======================
-   Clear wishlist
-======================= */
 
 export const useClearWishlist = () => {
   const queryClient = useQueryClient();
@@ -171,8 +155,5 @@ export const useClearWishlist = () => {
   });
 };
 
-/* =======================
-   Exports
-======================= */
 
 export type { Wishlist, ProductLike };

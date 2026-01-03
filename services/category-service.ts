@@ -22,16 +22,10 @@ interface BackendCategory {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8018";
 
-/* --------------------------------------------------
-   INTERNAL CACHE
--------------------------------------------------- */
 let categoryCache: Map<string, Category> | null = null;
 let cacheTimestamp = 0;
 const CACHE_TTL = 1000 * 60 * 10;
 
-/* --------------------------------------------------
-   TRANSFORM
--------------------------------------------------- */
 const transformCategory = (backend: BackendCategory): Category => ({
   id: backend._id,
   title: backend.title,
@@ -42,9 +36,6 @@ const transformCategory = (backend: BackendCategory): Category => ({
   type: backend.type,
 });
 
-/* --------------------------------------------------
-   FETCH CATEGORIES (FIXED ENDPOINT)
--------------------------------------------------- */
 export const fetchCategories = async (): Promise<Category[]> => {
   try {
     // ✅ FIX: product-categories (plural)
@@ -65,9 +56,6 @@ export const fetchCategories = async (): Promise<Category[]> => {
   }
 };
 
-/* --------------------------------------------------
-   CACHE HANDLING
--------------------------------------------------- */
 const ensureCache = async (): Promise<Map<string, Category>> => {
   const now = Date.now();
 
@@ -87,9 +75,6 @@ const ensureCache = async (): Promise<Map<string, Category>> => {
   return map;
 };
 
-/* --------------------------------------------------
-   PUBLIC HELPERS
--------------------------------------------------- */
 export const getCategoryBySlug = async (
   slug: string
 ): Promise<Category | null> => {
@@ -109,9 +94,6 @@ export const clearCategoryCache = (): void => {
   cacheTimestamp = 0;
 };
 
-/* --------------------------------------------------
-   DISPLAY NAME
--------------------------------------------------- */
 export const getCategoryDisplayName = (slug: string): string => {
   const map: Record<string, string> = {
     pendant: "Pendant",

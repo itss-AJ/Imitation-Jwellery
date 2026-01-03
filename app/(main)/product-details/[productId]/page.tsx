@@ -21,7 +21,6 @@ export default function ProductDetailsPage() {
   /* ================= ROUTE PARAM ================= */
   const params = useParams();
 
-  /** MUST match folder name: [productId] */
   const productId =
     typeof params.productId === "string" ? params.productId : "";
 
@@ -52,6 +51,7 @@ export default function ProductDetailsPage() {
 
   /* ================= HANDLERS ================= */
   const handleAddToCart = () => {
+    // add selected product to cart with chosen quantity
     addToCart.mutate({
       productId: product.id,
       name: product.title,
@@ -62,6 +62,7 @@ export default function ProductDetailsPage() {
   };
 
   const handleWishlistToggle = () => {
+    // toggle product in or out of the wishlist
     if (isWishlisted) {
       removeFromWishlist.mutate(product.id);
     } else {
@@ -82,7 +83,7 @@ export default function ProductDetailsPage() {
           {/* IMAGE */}
           <div className="relative aspect-square rounded-xl overflow-hidden">
             <Image
-              src={product.image}
+              src={product.image || "/placeholder.svg"}
               alt={product.title}
               fill
               className="object-cover"

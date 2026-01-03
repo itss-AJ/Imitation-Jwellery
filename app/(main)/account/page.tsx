@@ -1,73 +1,116 @@
-"use client"
-import CommonButton from "@/app/components/button/CommonButton"
-import CommonHeading from "@/app/components/CommonHeading"
-import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@headlessui/react"
-import { Edit2Icon, Lock, Plus, Pencil, Trash2 } from "lucide-react"
-import AddAddressModal from "./AddAddressModal"
-import { useState } from "react"
-import EditProfileModal from "./EditProfileModal"
-import Link from "next/link"
-import SignOutConfirmModal from "@/app/components/SignoutConfirm"
-import DeleteAddressConfirmModal from "@/app/components/DeleteAddressConfirm"
-import { useUserProfile, useLogout } from "@/hooks/use-auth"
-import { useOrders } from "@/hooks/use-orders"
-import { useAddAddress, useDeleteAddress, useSetDefaultAddress } from "@/hooks/use-address"
+"use client";
+import CommonButton from "@/app/components/button/CommonButton";
+import CommonHeading from "@/app/components/CommonHeading";
+import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@headlessui/react";
+import { Edit2Icon, Lock, Plus, Pencil, Trash2 } from "lucide-react";
+import AddAddressModal from "./AddAddressModal";
+import { useState } from "react";
+import EditProfileModal from "./EditProfileModal";
+import Link from "next/link";
+import SignOutConfirmModal from "@/app/components/SignoutConfirm";
+import DeleteAddressConfirmModal from "@/app/components/DeleteAddressConfirm";
+import { useUserProfile, useLogout } from "@/hooks/use-auth";
+import { useOrders } from "@/hooks/use-orders";
+import {
+  useAddAddress,
+  useDeleteAddress,
+  useSetDefaultAddress,
+  useUpdateAddress,
+} from "@/hooks/use-address";
+
+// Defined Address interface to remove 'any'
+interface Address {
+  id: string;
+  name: string;
+  address: string;
+  cityZip: string;
+  isDefault: boolean;
+}
 
 export default function Account() {
-  const [openAddAddress, setOpenAddAddress] = useState(false)
-  const [openEditProfile, setOpenEditProfile] = useState(false)
-  const [openSignOutConfirm, setOpenSignOutConfirm] = useState(false)
-  const [openDeleteAddress, setOpenDeleteAddress] = useState(false)
-  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
+  const [openAddAddress, setOpenAddAddress] = useState(false);
+  const [isEditAddress, setIsEditAddress] = useState(false);
+  // Replaced 'any' with Address type
+  const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+  const [openEditProfile, setOpenEditProfile] = useState(false);
+  const [openSignOutConfirm, setOpenSignOutConfirm] = useState(false);
+  const [openDeleteAddress, setOpenDeleteAddress] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
+    null
+  );
 
-  const { data: userProfile } = useUserProfile()
-  const { data: orders = [] } = useOrders()
-  const logout = useLogout()
-  const addAddress = useAddAddress()
-  const deleteAddress = useDeleteAddress()
-  const setDefaultAddress = useSetDefaultAddress()
+  const { data: userProfile } = useUserProfile();
+  const { data: orders = [] } = useOrders();
+  const logout = useLogout();
+  const addAddress = useAddAddress();
+  const updateAddress = useUpdateAddress();
+  const deleteAddress = useDeleteAddress();
+  const setDefaultAddress = useSetDefaultAddress();
 
-  const userName = userProfile?.name || "User"
-  const userPhone = userProfile?.phone || "+91 0000000000"
-  const userEmail = userProfile?.email || "user@example.com"
-  const addresses = userProfile?.addresses || []
+  const userName = userProfile?.name || "User";
+  const userPhone = userProfile?.phone || "+91 0000000000";
+  const userEmail = userProfile?.email || "user@example.com";
+  const addresses = userProfile?.addresses || [];
 
   const handleSignOut = () => {
-    logout.mutate()
-    setOpenSignOutConfirm(false)
-  }
+    logout.mutate();
+    setOpenSignOutConfirm(false);
+  };
 
   const handleAddressSave = (addressData: {
-    country: string
-    firstName: string
-    lastName: string
-    address: string
-    apartment: string
-    city: string
-    state: string
-    pincode: string
+    country: string;
+    firstName: string;
+    lastName: string;
+    address: string;
+    apartment: string;
+    city: string;
+    state: string;
+    pincode: string;
   }) => {
     // Convert form data to Address format
-    const newAddress = {
+    const addressPayload = {
       name: `${addressData.firstName} ${addressData.lastName}`.trim(),
-      address: addressData.address + (addressData.apartment ? `, ${addressData.apartment}` : ""),
+      address:
+        addressData.address +
+        (addressData.apartment ? `, ${addressData.apartment}` : ""),
       cityZip: `${addressData.city}, ${addressData.state} ${addressData.pincode}`,
-      isDefault: addresses.length === 0, // First address is default
+      isDefault: isEditAddress
+        ? editingAddress?.isDefault ?? false
+        : addresses.length === 0,
+    };
+
+    if (isEditAddress && editingAddress) {
+      updateAddress.mutate({
+        addressId: editingAddress.id,
+        addressData: addressPayload,
+      });
+    } else {
+      addAddress.mutate(addressPayload);
     }
-    addAddress.mutate(newAddress)
-  }
+
+    setOpenAddAddress(false);
+    setIsEditAddress(false);
+    setEditingAddress(null);
+  };
 
   const handleDeleteAddress = () => {
     if (selectedAddressId) {
-      deleteAddress.mutate(selectedAddressId)
-      setOpenDeleteAddress(false)
-      setSelectedAddressId(null)
+      deleteAddress.mutate(selectedAddressId);
+      setOpenDeleteAddress(false);
+      setSelectedAddressId(null);
     }
-  }
+  };
 
   const handleSetDefaultAddress = (addressId: string) => {
-    setDefaultAddress.mutate(addressId)
-  }
+    setDefaultAddress.mutate(addressId);
+  };
+
+  // Replaced 'any' with Address type
+  const handleEditAddress = (address: Address) => {
+    setEditingAddress(address);
+    setIsEditAddress(true);
+    setOpenAddAddress(true);
+  };
 
   return (
     <>
@@ -83,7 +126,9 @@ export default function Account() {
           <div className="accountSecWrap grid grid-cols-1 gap-5 max-w-5xl mx-auto">
             <div className="accountUserCard p-4 md:p-6 rounded-2xl bg-brand flex items-center gap-4">
               <div className="flex-1">
-                <h6 className="text-background text-2xl font-medium font-times mb-0.5">{userName}</h6>
+                <h6 className="text-background text-2xl font-medium font-times mb-0.5">
+                  {userName}
+                </h6>
                 <p className="text-background/80 text-sm mb-0.5">{userPhone}</p>
                 <p className="text-background/80 text-sm mb-0">{userEmail}</p>
               </div>
@@ -123,23 +168,28 @@ export default function Account() {
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                 {/* LEFT */}
                                 <div>
-                                  <p className="font-medium">Order #{order.id}</p>
+                                  <p className="font-medium">
+                                    Order #{order.id}
+                                  </p>
                                   <p className="text-sm text-foreground/70">
-                                    Placed on {order.date} • {order.items} item(s)
+                                    Placed on {order.date} • {order.items}{" "}
+                                    item(s)
                                   </p>
                                 </div>
 
                                 {/* RIGHT */}
                                 <div className="flex items-center gap-6">
-                                  <p className="text-sm font-medium">{order.total}</p>
+                                  <p className="text-sm font-medium">
+                                    {order.total}
+                                  </p>
 
                                   <span
                                     className={`px-3 py-1 text-xs rounded-full ${
                                       order.status === "Delivered"
                                         ? "bg-green-100 text-green-700"
                                         : order.status === "Shipped"
-                                          ? "bg-blue-100 text-blue-700"
-                                          : "bg-yellow-100 text-yellow-700"
+                                        ? "bg-blue-100 text-blue-700"
+                                        : "bg-yellow-100 text-yellow-700"
                                     }`}
                                   >
                                     {order.status}
@@ -149,7 +199,9 @@ export default function Account() {
                             </Link>
                           ))
                         ) : (
-                          <p className="text-foreground/60 text-sm">No orders yet</p>
+                          <p className="text-foreground/60 text-sm">
+                            No orders yet
+                          </p>
                         )}
                       </div>
                     </div>
@@ -160,10 +212,13 @@ export default function Account() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         <button
                           onClick={() => setOpenAddAddress(true)}
-                          className=" border-2 border-dashed border-foreground/20 rounded-xl p-6 flex flex-col items-center justify-center text-foreground hover:bg-primary/5 transition min-h-[220px]"
+                          // Updated to canonical tailwind class min-h-55
+                          className=" border-2 border-dashed border-foreground/20 rounded-xl p-6 flex flex-col items-center justify-center text-foreground hover:bg-primary/5 transition min-h-55"
                         >
                           <Plus size={28} />
-                          <span className="mt-2 font-medium tracking-wide">ADD NEW ADDRESS</span>
+                          <span className="mt-2 font-medium tracking-wide">
+                            ADD NEW ADDRESS
+                          </span>
                         </button>
 
                         {addresses.map((address) => (
@@ -173,13 +228,13 @@ export default function Account() {
                           >
                             {/* HEADER: NAME + EDIT */}
                             <div className="flex items-start justify-between gap-3">
-                              <p className="font-medium text-sm leading-tight">{address.name}</p>
+                              <p className="font-medium text-sm leading-tight">
+                                {address.name}
+                              </p>
 
                               <CommonButton
                                 variant="iconBtn"
-                                onClick={() => {
-                                  setOpenAddAddress(true)
-                                }}
+                                onClick={() => handleEditAddress(address)}
                               >
                                 <Pencil size={14} />
                               </CommonButton>
@@ -187,7 +242,10 @@ export default function Account() {
 
                             {/* ADDRESS DETAILS */}
                             <div className="mt-2 text-sm text-foreground/80 leading-relaxed space-y-0.5">
-                              <p className="break-words">{address.address}</p>
+                              {/* Updated to canonical tailwind class wrap-break-word */}
+                              <p className="wrap-break-word">
+                                {address.address}
+                              </p>
 
                               <p>{address.cityZip}</p>
 
@@ -202,11 +260,15 @@ export default function Account() {
                                 </span>
                               ) : (
                                 <button
-                                  onClick={() => handleSetDefaultAddress(address.id)}
+                                  onClick={() =>
+                                    handleSetDefaultAddress(address.id)
+                                  }
                                   className="px-4 py-1 text-xs rounded-full border border-brand hover:bg-brand/80 hover:text-background transition"
                                   disabled={setDefaultAddress.isPending}
                                 >
-                                  {setDefaultAddress.isPending ? "Setting..." : "Set Default"}
+                                  {setDefaultAddress.isPending
+                                    ? "Setting..."
+                                    : "Set Default"}
                                 </button>
                               )}
 
@@ -214,8 +276,8 @@ export default function Account() {
                                 variant="iconBtn"
                                 className="border-red-600 hover:bg-red-600 text-red-600 outline-0 ring-0"
                                 onClick={() => {
-                                  setSelectedAddressId(address.id)
-                                  setOpenDeleteAddress(true)
+                                  setSelectedAddressId(address.id);
+                                  setOpenDeleteAddress(true);
                                 }}
                               >
                                 <Trash2 size={16} />
@@ -240,9 +302,12 @@ export default function Account() {
                           </div>
 
                           <div>
-                            <p className="font-medium text-2xl font-times mb-1">Sign out everywhere</p>
+                            <p className="font-medium text-2xl font-times mb-1">
+                              Sign out everywhere
+                            </p>
                             <p className="text-sm text-foreground/70 leading-relaxed">
-                              If you&apos;ve lost a device or have security concerns, signing out everywhere will log you out
+                              If you&apos;ve lost a device or have security
+                              concerns, signing out everywhere will log you out
                               from all devices to keep your account secure.
                             </p>
                           </div>
@@ -275,8 +340,21 @@ export default function Account() {
           </div>
         </section>
       </div>
-      <AddAddressModal open={openAddAddress} onClose={() => setOpenAddAddress(false)} onSave={handleAddressSave} />
-      <EditProfileModal open={openEditProfile} onClose={() => setOpenEditProfile(false)} />
+      <AddAddressModal
+        open={openAddAddress}
+        onClose={() => {
+          setOpenAddAddress(false);
+          setIsEditAddress(false);
+          setEditingAddress(null);
+        }}
+        onSave={handleAddressSave}
+        isEdit={isEditAddress}
+        initialData={editingAddress}
+      />
+      <EditProfileModal
+        open={openEditProfile}
+        onClose={() => setOpenEditProfile(false)}
+      />
       <SignOutConfirmModal
         open={openSignOutConfirm}
         onClose={() => setOpenSignOutConfirm(false)}
@@ -288,5 +366,5 @@ export default function Account() {
         onConfirm={handleDeleteAddress}
       />
     </>
-  )
+  );
 }

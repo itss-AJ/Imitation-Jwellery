@@ -6,7 +6,7 @@ export const useOrders = () => {
   return useQuery({
     queryKey: ["orders", "list"],
     queryFn: fetchOrders,
-    enabled: isAuthenticated(), // Only fetch if authenticated
+    enabled: isAuthenticated(), // only fetch if authenticated
     staleTime: 1000 * 60 * 10, // 10 minutes
   })
 }

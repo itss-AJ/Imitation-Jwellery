@@ -30,6 +30,7 @@ interface BackendCustomer {
 interface BackendAddress {
   _id: string;
   name: string;
+  fullName?: string; // added fullName
   line1: string;
   line2?: string;
   city: string;
@@ -65,7 +66,7 @@ const transformAddress = (backendAddr: BackendAddress): Address => {
   );
   return {
     id: backendAddr._id,
-    name: backendAddr.name,
+    name: backendAddr.name || backendAddr.fullName || "", // use name or fullName
     address,
     cityZip,
     isDefault: backendAddr.isDefault || false,
@@ -130,7 +131,9 @@ export const fetchUserProfile = async (): Promise<User> => {
           addressesData.items ||
           [];
       }
-    } catch {}
+    } catch (err) {
+      console.warn("fetchUserProfile: failed to fetch addresses", err);
+    }
 
     return transformCustomer(backendCustomer, addresses);
   } catch (err) {
@@ -140,8 +143,19 @@ export const fetchUserProfile = async (): Promise<User> => {
 };
 
 export const loginUser = async (
-  _credentials: LoginCredentials
+  credentials: LoginCredentials
 ): Promise<{ user: User; token: string }> => {
+  const url = `${API_BASE_URL}/api/v1/customers/login`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(credentials),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Login failed: ${response.status}`);
+  }
+
   const user = await fetchUserProfile();
   return { user, token: "mock-jwt-token" };
 };

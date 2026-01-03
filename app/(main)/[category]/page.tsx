@@ -14,7 +14,7 @@ import {
   PopoverButton,
   PopoverPanel,
 } from "@headlessui/react";
-import { Check, CheckIcon, ChevronDown, Filter } from "lucide-react";
+import { Check, ChevronDown, Filter } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, notFound } from "next/navigation";
 import { useProductsByCategory } from "@/hooks/use-products";
@@ -48,7 +48,7 @@ export default function CategoryProductList() {
   const params = useParams();
   const categorySlug = params.category as string;
 
-  // stop page if category is wrong
+  // check if the category in the url is valid
   if (!VALID_CATEGORIES.includes(categorySlug.toLowerCase())) {
     notFound();
   }
@@ -85,6 +85,7 @@ export default function CategoryProductList() {
     [debouncedPrice]
   );
 
+  // fetch products for this specific category from the backend
   const {
     data,
     isLoading,
@@ -277,6 +278,7 @@ export default function CategoryProductList() {
               sortedProducts.map((product) => (
                 <CommonProductCard
                   key={product.id}
+                  productId={product.id}
                   title={product.title}
                   price={product.price}
                   oldPrice={product.oldPrice}

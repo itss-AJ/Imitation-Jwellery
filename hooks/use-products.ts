@@ -8,9 +8,6 @@ import {
 } from "@/services/product-service";
 import { getCategoryIdBySlug } from "@/services/category-service";
 
-/* -----------------------------------------
-   NORMAL PRODUCT LIST
------------------------------------------ */
 export const useProducts = (filters: ProductFilters = {}) => {
   return useQuery<ProductListResponse, Error>({
     queryKey: ["products", "list", filters],
@@ -21,9 +18,6 @@ export const useProducts = (filters: ProductFilters = {}) => {
   });
 };
 
-/* -----------------------------------------
-   EXISTING HOME PAGE HOOK (RESTORED)
------------------------------------------ */
 export const useProductsInfinite = (
   filters: Omit<ProductFilters, "page" | "limit"> = {}
 ) => {
@@ -49,9 +43,6 @@ export const useProductsInfinite = (
   });
 };
 
-/* -----------------------------------------
-   INTERNAL HOOK TO RESOLVE CATEGORY ID
------------------------------------------ */
 const useCategoryId = (slug: string) => {
   return useQuery<string | null>({
     queryKey: ["category-id", slug],
@@ -61,9 +52,6 @@ const useCategoryId = (slug: string) => {
   });
 };
 
-/* -----------------------------------------
-   CATEGORY PAGE HOOK (SAFE + CORRECT)
------------------------------------------ */
 export const useProductsByCategory = (
   categorySlug: string,
   additionalFilters: Omit<ProductFilters, "categoryId" | "page" | "limit"> = {}

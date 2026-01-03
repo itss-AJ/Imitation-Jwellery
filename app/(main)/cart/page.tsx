@@ -16,35 +16,35 @@ import {
 // static products for recommendation section
 const PRODUCTS = [
   {
-    id: 1,
+    id: "69562cc62c9e2fba8807ad15", // Updated mock IDs to real MongoDB ObjectIDs
     title: "Glossy Heart Stud",
     price: "Rs. 799.00",
     oldPrice: "Rs. 849.00",
     image: "/img/bracelet-img.webp",
   },
   {
-    id: 2,
+    id: "69562cc62c9e2fba8807ad26", // Updated mock IDs to real MongoDB ObjectIDs
     title: "Interlocking Hoop Earring",
     price: "Rs. 1,299.00",
     oldPrice: "Rs. 1,349.00",
     image: "/img/bracelets.webp",
   },
   {
-    id: 3,
+    id: "69562cc62c9e2fba8807ad1a", // Updated mock IDs to real MongoDB ObjectIDs
     title: "Interlocking Hoop Earring",
     price: "Rs. 1,299.00",
     oldPrice: "Rs. 1,349.00",
     image: "/img/jewelrySet.webp",
   },
   {
-    id: 4,
+    id: "69562cc62c9e2fba8807ad29", // Updated mock IDs to real MongoDB ObjectIDs
     title: "Interlocking Hoop Earring",
     price: "Rs. 1,299.00",
     oldPrice: "Rs. 1,349.00",
     image: "/img/pendant_old.webp",
   },
   {
-    id: 5,
+    id: "69562cc62c9e2fba8807ad28", // Updated mock IDs to real MongoDB ObjectIDs
     title: "Interlocking Hoop Earring",
     price: "Rs. 1,299.00",
     oldPrice: "Rs. 1,349.00",
@@ -258,6 +258,7 @@ export default function CartPage() {
               {PRODUCTS.map((product) => (
                 <CommonProductCard
                   key={product.id}
+                  productId={product.id}
                   title={product.title}
                   price={product.price}
                   oldPrice={product.oldPrice}

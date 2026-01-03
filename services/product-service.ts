@@ -2,7 +2,7 @@
 
 import { getCategoryIdBySlug } from "./category-service";
 
-// product shape used in frontend
+// shape of product for the screen
 export interface Product {
   id: string;
   title: string;
@@ -43,7 +43,7 @@ export interface ProductFilters {
   limit?: number;
 }
 
-// backend product shape
+// backend data shape
 interface BackendProduct {
   _id: string;
   sku: string;
@@ -74,7 +74,7 @@ const formatPrice = (price: number): string => {
   })}`;
 };
 
-// convert backend product to frontend product
+// turn backend data into screen data
 const transformProduct = (backendProduct: BackendProduct): Product => {
   const priceNumber = Number(backendProduct.price) || 0;
 
@@ -102,12 +102,12 @@ const transformProduct = (backendProduct: BackendProduct): Product => {
     stockQty: Number(backendProduct.stockQty) || 0,
   };
 
-  // show old price if mrp is higher
+  // add old price if it exists
   if (backendProduct.mrp && backendProduct.mrp > priceNumber) {
     product.oldPrice = formatPrice(backendProduct.mrp);
   }
 
-  // set badge tag
+  // add badge for new or best items
   if (backendProduct.isNewArrival) {
     product.tag = { label: "New Arrival", variant: "primary" };
   } else if (backendProduct.isBestSeller) {
@@ -117,7 +117,7 @@ const transformProduct = (backendProduct: BackendProduct): Product => {
   return product;
 };
 
-// fetch products list
+// get products from backend
 export const fetchProducts = async (
   filters: ProductFilters = {}
 ): Promise<ProductListResponse> => {

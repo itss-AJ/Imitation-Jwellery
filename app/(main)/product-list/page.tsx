@@ -321,6 +321,7 @@ export default function ProductList() {
               sortedProducts.map((product) => (
                 <CommonProductCard
                   key={product.id}
+                  productId={product.id}
                   title={product.title}
                   price={product.price}
                   oldPrice={product.oldPrice}

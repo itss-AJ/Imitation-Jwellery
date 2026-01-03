@@ -8,7 +8,6 @@ import {
 } from "@/services/auth-service";
 import { useRouter } from "next/navigation";
 
-// Current user (guest when unauthenticated)
 export const useAuth = () => {
   return useQuery<User>({
     queryKey: ["auth", "me"],
@@ -19,14 +18,11 @@ export const useAuth = () => {
   });
 };
 
-// Alias to support existing imports
 export { useAuth as useUserProfile };
 
-// Auth helpers
 export const isAuthenticated = (user?: User): boolean =>
   !!user && user.id !== "guest";
 
-// Logout mutation
 export const useLogout = () => {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -54,7 +50,6 @@ export const useLogout = () => {
   });
 };
 
-// Update profile mutation (PUT /customers/me)
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
 
@@ -65,7 +60,6 @@ export const useUpdateProfile = () => {
       return updateUserProfile(payload);
     },
     onSuccess: (user) => {
-      // Refresh cached profile
       queryClient.setQueryData<User>(["auth", "me"], user);
     },
   });

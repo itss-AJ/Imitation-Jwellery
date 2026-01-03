@@ -10,9 +10,7 @@ import {
   type Cart,
 } from "@/services/cart-service";
 
-/* =========================
-   CART QUERY
-========================= */
+
 export const useCart = () => {
   return useQuery<Cart, Error>({
     queryKey: ["cart"],
@@ -25,9 +23,6 @@ export const useCart = () => {
   });
 };
 
-/* =========================
-   CART COUNT (NO REFETCH)
-========================= */
 export const useCartCount = () => {
   const qc = useQueryClient();
   const cart = qc.getQueryData<Cart>(["cart"]);
@@ -35,17 +30,12 @@ export const useCartCount = () => {
   return cart?.items?.reduce((sum, item) => sum + (item.quantity ?? 1), 0) ?? 0;
 };
 
-/* =========================
-   CART TOTAL (NO REFETCH)
-========================= */
 export const useCartTotal = () => {
   const qc = useQueryClient();
   return qc.getQueryData<Cart>(["cart"])?.total ?? 0;
 };
 
-/* =========================
-   ADD TO CART
-========================= */
+
 export const useAddToCart = () => {
   const qc = useQueryClient();
 
@@ -112,9 +102,7 @@ export const useAddToCart = () => {
   });
 };
 
-/* =========================
-   REMOVE FROM CART
-========================= */
+
 export const useRemoveFromCart = () => {
   const qc = useQueryClient();
 
@@ -150,9 +138,6 @@ export const useRemoveFromCart = () => {
   });
 };
 
-/* =========================
-   UPDATE CART QUANTITY
-========================= */
 export const useUpdateCartQuantity = () => {
   const qc = useQueryClient();
 
@@ -203,9 +188,6 @@ export const useUpdateCartQuantity = () => {
 };
 
 
-/* =========================
-   CLEAR CART
-========================= */
 export const useClearCart = () => {
   const qc = useQueryClient();
 

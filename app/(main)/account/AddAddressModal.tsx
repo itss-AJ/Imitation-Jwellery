@@ -1,30 +1,44 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
+import { Fragment, useState, useEffect } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import { X } from "lucide-react";
+import CommonInput from "@/app/components/input/CommonInput";
+import CommonButton from "@/app/components/button/CommonButton";
 
-import { Fragment, useState } from "react"
-import { Dialog, Transition } from "@headlessui/react"
-import { X } from "lucide-react"
-import CommonInput from "@/app/components/input/CommonInput"
-import CommonButton from "@/app/components/button/CommonButton"
-
-type AddAddressModalProps = {
-  open: boolean
-  onClose: () => void
-  isEdit?: boolean
-  onSave?: (address: {
-    country: string
-    firstName: string
-    lastName: string
-    address: string
-    apartment: string
-    city: string
-    state: string
-    pincode: string
-  }) => void
+interface AddressData {
+  id?: string;
+  name: string;
+  address: string;
+  cityZip: string;
+  isDefault?: boolean;
 }
 
-export default function AddAddressModal({ open, onClose, isEdit = false, onSave }: AddAddressModalProps) {
+type AddAddressModalProps = {
+  open: boolean;
+  onClose: () => void;
+  isEdit?: boolean;
+  initialData?: AddressData | null;
+  onSave?: (address: {
+    country: string;
+    firstName: string;
+    lastName: string;
+    address: string;
+    apartment: string;
+    city: string;
+    state: string;
+    pincode: string;
+  }) => void;
+};
+
+export default function AddAddressModal({
+  open,
+  onClose,
+  isEdit = false,
+  initialData,
+  onSave,
+}: AddAddressModalProps) {
   const [formData, setFormData] = useState({
     country: "India",
     firstName: "",
@@ -34,17 +48,63 @@ export default function AddAddressModal({ open, onClose, isEdit = false, onSave 
     city: "",
     state: "",
     pincode: "",
-  })
+  });
+
+  const [prevOpen, setPrevOpen] = useState(false);
+
+  useEffect(() => {
+    if (open && !prevOpen) {
+      setPrevOpen(true);
+      if (isEdit && initialData) {
+        const nameParts = (initialData.name || "").trim().split(/\s+/);
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+
+        const addressParts = (initialData.address || "")
+          .split(",")
+          .map((s: string) => s.trim());
+        const cityZipParts = (initialData.cityZip || "")
+          .split(",")
+          .map((s: string) => s.trim());
+
+        setFormData({
+          country: "India",
+          firstName,
+          lastName,
+          address: addressParts[0] || "",
+          apartment: addressParts[1] || "",
+          city: cityZipParts[0] || "",
+          state: cityZipParts[1] || "",
+          pincode: cityZipParts[2] || "",
+        });
+      } else {
+        setFormData({
+          country: "India",
+          firstName: "",
+          lastName: "",
+          address: "",
+          apartment: "",
+          city: "",
+          state: "",
+          pincode: "",
+        });
+      }
+    }
+
+    if (!open && prevOpen) {
+      setPrevOpen(false);
+    }
+  }, [open, isEdit, initialData]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (onSave) {
-      onSave(formData)
+      onSave(formData);
     }
     // Reset form and close
     setFormData({
@@ -56,9 +116,9 @@ export default function AddAddressModal({ open, onClose, isEdit = false, onSave 
       city: "",
       state: "",
       pincode: "",
-    })
-    onClose()
-  }
+    });
+    onClose();
+  };
 
   return (
     <Transition appear show={open} as={Fragment}>
@@ -94,7 +154,11 @@ export default function AddAddressModal({ open, onClose, isEdit = false, onSave 
                   <Dialog.Title className="text-lg font-medium">
                     {isEdit ? "Edit address" : "Add new address"}
                   </Dialog.Title>
-                  <button onClick={onClose} className="p-2 rounded-full hover:bg-foreground/10">
+                  <button
+                    onClick={onClose}
+                    aria-label="Close"
+                    className="p-2 rounded-full hover:bg-foreground/10"
+                  >
                     <X size={18} />
                   </button>
                 </div>
@@ -181,7 +245,10 @@ export default function AddAddressModal({ open, onClose, isEdit = false, onSave 
                   {/* FOOTER ACTIONS */}
                   <div className="pt-4 flex items-center justify-between">
                     {isEdit ? (
-                      <button type="button" className="text-sm text-red-600 hover:underline">
+                      <button
+                        type="button"
+                        className="text-sm text-red-600 hover:underline"
+                      >
                         Delete
                       </button>
                     ) : (
@@ -189,7 +256,12 @@ export default function AddAddressModal({ open, onClose, isEdit = false, onSave 
                     )}
 
                     <div className="flex gap-3">
-                      <CommonButton type="button" variant="secondaryBtn" onClick={onClose} className="w-fit px-6">
+                      <CommonButton
+                        type="button"
+                        variant="secondaryBtn"
+                        onClick={onClose}
+                        className="w-fit px-6"
+                      >
                         Cancel
                       </CommonButton>
                       <CommonButton type="submit" className="w-fit px-6">
@@ -204,5 +276,5 @@ export default function AddAddressModal({ open, onClose, isEdit = false, onSave 
         </div>
       </Dialog>
     </Transition>
-  )
+  );
 }

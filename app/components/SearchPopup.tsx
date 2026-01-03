@@ -13,7 +13,7 @@ type SearchPopupProps = {
 };
 
 type Product = {
-  id: number;
+  id: string;
   title: string;
   price: string;
   image: string;
@@ -21,25 +21,25 @@ type Product = {
 
 const SEARCH_PRODUCTS: Product[] = [
   {
-    id: 1,
+    id: "69562cc62c9e2fba8807ad1b",
     title: "Gold Plated Large Oval Shape Hoop Earring",
     price: "₹199",
     image: "/img/bracelet-img.webp",
   },
   {
-    id: 2,
+    id: "69562cc62c9e2fba8807ad18",
     title: "Korean Pearl Drop Earring",
     price: "₹399",
     image: "/img/earring.webp",
   },
   {
-    id: 3,
+    id: "69562cc62c9e2fba8807ad22",
     title: "Big Golden Rectangular Pendant",
     price: "₹499",
     image: "/img/pendant_old.webp",
   },
   {
-    id: 4,
+    id: "69562cc62c9e2fba8807ad23",
     title: "Diamond Studded Bell Shape Pendant",
     price: "₹499",
     image: "/img/jewelrySet.webp",
@@ -59,7 +59,6 @@ export default function SearchPopup({ open, onClose }: SearchPopupProps) {
   return (
     <Transition appear show={open} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
-
         {/* BACKDROP */}
         <Transition.Child
           as={Fragment}
@@ -76,7 +75,6 @@ export default function SearchPopup({ open, onClose }: SearchPopupProps) {
         {/* CONTAINER */}
         <div className="fixed inset-0 overflow-hidden">
           <div className="flex h-full items-end sm:items-center justify-center">
-
             {/* PANEL */}
             <Transition.Child
               as={Fragment}
@@ -88,10 +86,10 @@ export default function SearchPopup({ open, onClose }: SearchPopupProps) {
               leaveTo="opacity-0 translate-y-full sm:translate-y-6 sm:scale-95"
             >
               <Dialog.Panel className="w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl p-3 md:p-6 relative">
-
                 {/* CLOSE */}
                 <button
                   onClick={onClose}
+                  aria-label="Close search popup"
                   className="absolute right-4 top-4 p-2 rounded-full hover:bg-foreground/10"
                 >
                   <X size={18} />
@@ -110,7 +108,7 @@ export default function SearchPopup({ open, onClose }: SearchPopupProps) {
                   <Link href="/product-list" onClick={onClose}>
                     <Search
                       size={18}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/60 cursor-pointer z-[1]"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/60 cursor-pointer z-1"
                     />
                   </Link>
                   <CommonInput
@@ -132,13 +130,13 @@ export default function SearchPopup({ open, onClose }: SearchPopupProps) {
                     filteredProducts.map((product) => (
                       <Link
                         key={product.id}
-                        href={`/product-details/`}
+                        href={`/product-details/${product.id}`}
                         onClick={onClose}
                         className="flex gap-4 items-center"
                       >
                         <div className="relative w-14 h-14 rounded-md overflow-hidden bg-foreground/10">
                           <Image
-                            src={product.image}
+                            src={product.image || "/placeholder.svg"}
                             alt={product.title}
                             fill
                             className="object-cover"
@@ -157,7 +155,6 @@ export default function SearchPopup({ open, onClose }: SearchPopupProps) {
                     ))
                   )}
                 </div>
-
               </Dialog.Panel>
             </Transition.Child>
           </div>

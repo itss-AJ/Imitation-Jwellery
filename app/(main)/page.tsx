@@ -14,8 +14,7 @@ import {
   PopoverButton,
   PopoverPanel,
 } from "@headlessui/react";
-import { Check, CheckIcon, ChevronDown, Filter } from "lucide-react";
-import Link from "next/link";
+import { Check, ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useProductsInfinite } from "@/hooks/use-products";
 import type { ProductListResponse } from "@/services/product-service";
@@ -224,6 +223,7 @@ export default function ProductList() {
               sortedProducts.map((product) => (
                 <CommonProductCard
                   key={product.id}
+                  productId={product.id}
                   title={product.title}
                   price={product.price}
                   oldPrice={product.oldPrice}

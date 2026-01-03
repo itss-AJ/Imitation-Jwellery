@@ -1,8 +1,7 @@
 // services/wishlist-service.ts
-// Wishlist API with local fallback (device based)
 
 export type WishlistItem = {
-  id: string; // wishlist item _id
+  id: string;
   productId: string;
   title: string;
   price: string;
@@ -20,11 +19,10 @@ export type ProductLike = {
   image: string;
 };
 
-// ================= CONFIG =================
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8018";
 
-// ================= DEVICE ID =================
+
 
 // get or create device id (used by backend)
 const getDeviceId = (): string => {
@@ -45,7 +43,6 @@ const getDeviceId = (): string => {
   return id;
 };
 
-// ================= LOCAL STORAGE =================
 
 const localKey = () => `wishlist:${getDeviceId()}`;
 
@@ -66,8 +63,6 @@ const saveLocalWishlist = (wishlist: Wishlist): void => {
   }
 };
 
-// ================= BACKEND TYPES =================
-
 interface BackendWishlistItem {
   _id: string;
   productId:
@@ -82,7 +77,6 @@ interface BackendWishlistItem {
   addedAt?: string;
 }
 
-// ================= TRANSFORM =================
 
 const transformWishlistItem = (
   item: BackendWishlistItem,
@@ -116,7 +110,6 @@ const transformWishlistItem = (
   };
 };
 
-// ================= API =================
 
 // GET /wishlist
 export const getWishlist = async (): Promise<Wishlist> => {
@@ -138,11 +131,7 @@ export const getWishlist = async (): Promise<Wishlist> => {
     const backendItems: BackendWishlistItem[] =
       data?.data?.wishlist?.items ?? [];
 
-    /**
-     * 🚨 CRITICAL FIX
-     * Backend may return empty even when local has data.
-     * NEVER wipe local state in that case.
-     */
+    
     if (!backendItems.length) {
       return localWishlist;
     }
