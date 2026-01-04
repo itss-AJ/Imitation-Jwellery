@@ -29,7 +29,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
     0
   );
 
-  console.log("[v0] CartDrawer rendered with:", {
+  console.log("Checking CartDrawer rendered with:", {
     itemCount: cartItems.length,
     cartCount,
     cartTotal,

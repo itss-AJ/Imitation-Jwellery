@@ -1,47 +1,98 @@
-import BestSeller from "../components/BestSeller";
-import CommonHeading from "../components/CommonHeading";
-import CommonProductCard from "../components/CommonProductCard";
-import HomeCategoriesSection from "../components/HomeCategoriesSection";
-import HomeCustomerFeedback from "../components/HomeCustomerFeedback";
-import HomeFeaturedCollectionSection from "../components/HomeFeaturedCollectionSection";
-import HomeFollowOnSocialSection from "../components/HomeFollowOnSocialSection";
-import HomeHeroSection from "../components/HomeHeroSec";
-import HomeStoreFeature from "../components/HomeStoreFeature";
-import ProductFeatureStrip from "../components/ProductFeatureStrip";
+"use client";
+
+import BestSeller from "@/app/components/BestSeller";
+import CommonHeading from "@/app/components/CommonHeading";
+import CommonProductCard from "@/app/components/CommonProductCard";
+import HomeCategoriesSection from "@/app/components/HomeCategoriesSection";
+import HomeCustomerFeedback from "@/app/components/HomeCustomerFeedback";
+import HomeFeaturedCollectionSection from "@/app/components/HomeFeaturedCollectionSection";
+import HomeFollowOnSocialSection from "@/app/components/HomeFollowOnSocialSection";
+import HomeHeroSection from "@/app/components/HomeHeroSec";
+import HomeStoreFeature from "@/app/components/HomeStoreFeature";
+import ProductFeatureStrip from "@/app/components/ProductFeatureStrip";
+import { useProductsInfinite } from "@/hooks/use-products";
+import { useMemo } from "react";
 
 export default function Home() {
-  const PRODUCTS = [
-    {
-        id: 1,
-        title: "Glossy Heart Stud",
-        price: "Rs. 799.00",
-        image: "/img/bracelet-img.webp",
-    },
-    {
-        id: 2,
-        title: "Interlocking Hoop Earring",
-        price: "Rs. 1,299.00",
-        image: "/img/bracelets.webp",
-    },
-    {
-        id: 3,
-        title: "Interlocking Hoop Earring",
-        price: "Rs. 1,299.00",
-        image: "/img/jewelrySet.webp",
-    },
-    {
-        id: 4,
-        title: "Interlocking Hoop Earring",
-        price: "Rs. 1,299.00",
-        image: "/img/pendant_old.webp",
-    },
-    {
-        id: 5,
-        title: "Interlocking Hoop Earring",
-        price: "Rs. 1,299.00",
-        image: "/img/necklace.webp",
-    },
-];
+  const { data: newArrivalData, isLoading: isLoadingNewArrivals } =
+    useProductsInfinite({
+      isNewArrival: true,
+      limit: 5,
+    });
+
+  const newArrivalPages = useMemo(
+    () => newArrivalData?.pages ?? [],
+    [newArrivalData]
+  );
+  const newArrivalProducts = useMemo(
+    () =>
+      newArrivalPages
+        .flatMap((page) => (Array.isArray(page.data) ? page.data : []))
+        .slice(0, 5),
+    [newArrivalPages]
+  );
+
+  const FEATURED_PRODUCTS =
+    newArrivalProducts.length > 0
+      ? newArrivalProducts
+      : [
+          {
+            id: "static-1",
+            title: "Glossy Heart Stud",
+            price: "Rs. 799.00",
+            image: "/img/bracelet-img.webp",
+            priceNumber: 799,
+            createdAtMs: 0,
+            isNewArrival: true,
+            isBestSeller: false,
+            stockQty: 10,
+          },
+          {
+            id: "static-2",
+            title: "Interlocking Hoop Earring",
+            price: "Rs. 1,299.00",
+            image: "/img/bracelets.webp",
+            priceNumber: 1299,
+            createdAtMs: 0,
+            isNewArrival: true,
+            isBestSeller: false,
+            stockQty: 10,
+          },
+          {
+            id: "static-3",
+            title: "Interlocking Hoop Earring",
+            price: "Rs. 1,299.00",
+            image: "/img/jewelrySet.webp",
+            priceNumber: 1299,
+            createdAtMs: 0,
+            isNewArrival: true,
+            isBestSeller: false,
+            stockQty: 10,
+          },
+          {
+            id: "static-4",
+            title: "Interlocking Hoop Earring",
+            price: "Rs. 1,299.00",
+            image: "/img/pendant_old.webp",
+            priceNumber: 1299,
+            createdAtMs: 0,
+            isNewArrival: true,
+            isBestSeller: false,
+            stockQty: 10,
+          },
+          {
+            id: "static-5",
+            title: "Interlocking Hoop Earring",
+            price: "Rs. 1,299.00",
+            image: "/img/necklace.webp",
+            priceNumber: 1299,
+            createdAtMs: 0,
+            isNewArrival: true,
+            isBestSeller: false,
+            stockQty: 10,
+          },
+        ];
+
   return (
     <>
       <div className="homepageWrap gradientBg">
@@ -49,25 +100,14 @@ export default function Home() {
 
         <ProductFeatureStrip />
 
-        {/* <h1 className="font-times uppercase text-8xl">WELCOME</h1> */}
-
-        {/* <section className="px-5 md:px-8 lg:px-10">
-          <CommonHeading
-            level={1}
-            title="Welcome to Privora"
-            description="Welcome to White Bunny, where elegance meets simplicity. We are a contemporary jewelry brand crafted for the modern Indian woman who values minimalism, affordability, and self-expression. Our jewelry is designed to be more than just an accessory—it's a reflection of your personality, confidence, and unique style."
-            noMargin
-          />
-        </section> */}
         {/* Categories Section */}
         <HomeCategoriesSection />
 
-
         <BestSeller />
-
 
         <HomeCustomerFeedback />
 
+        {/* Featured Products Section - now with real data or static fallback */}
         <section className="px-3 md:px-8 lg:px-10 py-7 md:py-12 lg:py-20">
           <CommonHeading
             level={1}
@@ -75,14 +115,21 @@ export default function Home() {
             description="Jewelry crafted with care, guided by responsibility."
           />
           <div className="commonProductGrid grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-10 max-w-[1560px] mx-auto">
-            {PRODUCTS.map((product) => (
-              <CommonProductCard
-                key={product.id}
-                title={product.title}
-                price={product.price}
-                image={product.image}
-              />
-            ))}
+            {isLoadingNewArrivals ? (
+              <div className="col-span-full text-center py-10">
+                Loading products...
+              </div>
+            ) : (
+              FEATURED_PRODUCTS.map((product) => (
+                <CommonProductCard
+                  key={product.id}
+                  productId={product.id}
+                  title={product.title}
+                  price={product.price}
+                  image={product.image}
+                />
+              ))
+            )}
           </div>
         </section>
 
@@ -91,9 +138,6 @@ export default function Home() {
         <HomeFollowOnSocialSection />
 
         <HomeStoreFeature />
-
-        {/* <HomeHeroSection />
-        <HomeHeroSection /> */}
       </div>
     </>
   );

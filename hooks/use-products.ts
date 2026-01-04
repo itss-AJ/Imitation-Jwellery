@@ -1,5 +1,3 @@
-// hooks/use-products.ts
-
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import {
   fetchProducts,
@@ -10,16 +8,15 @@ import { getCategoryIdBySlug } from "@/services/category-service";
 
 export const useProducts = (filters: ProductFilters = {}) => {
   return useQuery<ProductListResponse, Error>({
-    queryKey: ["products", "list", filters],
+    queryKey: ["products", filters],
     queryFn: () => fetchProducts(filters),
     staleTime: 1000 * 60 * 5,
-    placeholderData: (prev) => prev,
     retry: 2,
   });
 };
 
 export const useProductsInfinite = (
-  filters: Omit<ProductFilters, "page" | "limit"> = {}
+  filters: Omit<ProductFilters, "page" | "limit" | "categoryId"> = {}
 ) => {
   return useInfiniteQuery<ProductListResponse, Error>({
     queryKey: ["products", "infinite", filters],
@@ -28,15 +25,15 @@ export const useProductsInfinite = (
       fetchProducts({
         ...filters,
         page: pageParam as number,
+        limit: 20,
       }),
 
     initialPageParam: 1,
 
-    getNextPageParam: (lastPage) => {
-      const current = lastPage?.meta?.currentPage ?? 1;
-      const total = lastPage?.meta?.totalPages ?? 1;
-      return current < total ? current + 1 : undefined;
-    },
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.currentPage < lastPage.meta.totalPages
+        ? lastPage.meta.currentPage + 1
+        : undefined,
 
     staleTime: 1000 * 60 * 5,
     retry: 2,
@@ -47,47 +44,61 @@ const useCategoryId = (slug: string) => {
   return useQuery<string | null>({
     queryKey: ["category-id", slug],
     queryFn: () => getCategoryIdBySlug(slug),
-    enabled: !!slug,
+    enabled: Boolean(slug),
     staleTime: 1000 * 60 * 10,
+    retry: false,
   });
 };
 
 export const useProductsByCategory = (
   categorySlug: string,
-  additionalFilters: Omit<ProductFilters, "categoryId" | "page" | "limit"> = {}
+  filters: Omit<ProductFilters, "categoryId" | "page" | "limit"> = {}
 ) => {
   const { data: categoryId, isLoading } = useCategoryId(categorySlug);
 
-  // convert null → undefined for TS
-  const resolvedCategoryId: string | undefined = categoryId ?? undefined;
+  // check if jewelry set page
+  const isJewelrySet = categorySlug === "jewelry-set";
+
+  // categories inside jewelry set
+  const jewelrySetSlugs = ["pendant", "earring", "bracelet", "necklace"];
 
   return useInfiniteQuery<ProductListResponse, Error>({
-    queryKey: [
-      "products",
-      "category",
-      categorySlug,
-      resolvedCategoryId,
-      additionalFilters,
-    ],
+    queryKey: ["products", "category", categorySlug, filters],
 
-    queryFn: ({ pageParam }) =>
-      fetchProducts({
-        ...additionalFilters,
-        categoryId: resolvedCategoryId,
+    queryFn: async ({ pageParam }) => {
+      // for jewelry set fetch multiple categories
+      if (isJewelrySet) {
+        const ids = await Promise.all(
+          jewelrySetSlugs.map((slug) => getCategoryIdBySlug(slug))
+        );
+
+        return fetchProducts({
+          ...filters,
+          categoryId: ids.filter(Boolean) as string[],
+          page: pageParam as number,
+          limit: 20,
+        });
+      }
+
+      // normal single category flow
+      return fetchProducts({
+        ...filters,
+        categoryId: categoryId!,
         page: pageParam as number,
-      }),
+        limit: 20,
+      });
+    },
 
     initialPageParam: 1,
 
-    getNextPageParam: (lastPage) => {
-      const current = lastPage?.meta?.currentPage ?? 1;
-      const total = lastPage?.meta?.totalPages ?? 1;
-      return current < total ? current + 1 : undefined;
-    },
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.currentPage < lastPage.meta.totalPages
+        ? lastPage.meta.currentPage + 1
+        : undefined,
+
+    enabled: (isJewelrySet || Boolean(categoryId)) && !isLoading,
 
     staleTime: 1000 * 60 * 5,
     retry: 2,
-
-    enabled: !!resolvedCategoryId && !isLoading,
   });
 };

@@ -22,9 +22,10 @@ interface BackendCategory {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8018";
 
+// in-memory cache
 let categoryCache: Map<string, Category> | null = null;
 let cacheTimestamp = 0;
-const CACHE_TTL = 1000 * 60 * 10;
+const CACHE_TTL = 1000 * 60 * 10; // 10 min
 
 const transformCategory = (backend: BackendCategory): Category => ({
   id: backend._id,
@@ -36,26 +37,24 @@ const transformCategory = (backend: BackendCategory): Category => ({
   type: backend.type,
 });
 
+// fetch all active categories from backend
 export const fetchCategories = async (): Promise<Category[]> => {
-  try {
-    // ✅ FIX: product-categories (plural)
-    const url = `${API_BASE_URL}/api/v1/product-categories?isActive=true&type=category`;
+  const res = await fetch(
+    `${API_BASE_URL}/api/v1/product-categories?isActive=true&type=category`
+  );
 
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch categories ${res.status}`);
-    }
-
-    const json = await res.json();
-    const items: BackendCategory[] = json?.data?.items ?? [];
-
-    return items.map(transformCategory);
-  } catch (err) {
-    console.error("fetchCategories failed", err);
-    return [];
+  if (!res.ok) {
+    throw new Error(`Failed to fetch categories (${res.status})`);
   }
+
+  const json = await res.json();
+  const items: BackendCategory[] = json?.data?.items ?? [];
+
+  return items.map(transformCategory);
 };
 
+
+// ensure cache exists and is fresh
 const ensureCache = async (): Promise<Map<string, Category>> => {
   const now = Date.now();
 
@@ -75,6 +74,7 @@ const ensureCache = async (): Promise<Map<string, Category>> => {
   return map;
 };
 
+// get full category object by slug
 export const getCategoryBySlug = async (
   slug: string
 ): Promise<Category | null> => {
@@ -82,6 +82,7 @@ export const getCategoryBySlug = async (
   return cache.get(slug.toLowerCase()) ?? null;
 };
 
+// get only categoryId (used by product API)
 export const getCategoryIdBySlug = async (
   slug: string
 ): Promise<string | null> => {
@@ -89,20 +90,8 @@ export const getCategoryIdBySlug = async (
   return cat?.id ?? null;
 };
 
+// clear cache (useful after admin updates)
 export const clearCategoryCache = (): void => {
   categoryCache = null;
   cacheTimestamp = 0;
-};
-
-export const getCategoryDisplayName = (slug: string): string => {
-  const map: Record<string, string> = {
-    pendant: "Pendant",
-    necklace: "Necklace",
-    earring: "Earring",
-    bracelet: "Bracelet",
-    "jewelry-set": "Jewelry Set",
-    ring: "Ring",
-  };
-
-  return map[slug] || slug.replace(/-/g, " ");
 };

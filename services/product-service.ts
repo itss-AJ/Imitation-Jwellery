@@ -1,8 +1,6 @@
 // services/product-service.ts
 
-import { getCategoryIdBySlug } from "./category-service";
 
-// shape of product for the screen
 export interface Product {
   id: string;
   title: string;
@@ -20,7 +18,6 @@ export interface Product {
   };
 }
 
-// api response shape
 export interface ProductListResponse {
   data: Product[];
   meta: {
@@ -30,11 +27,9 @@ export interface ProductListResponse {
   };
 }
 
-// filters accepted by api
 export interface ProductFilters {
   search?: string;
   categoryId?: string | string[];
-  categorySlug?: string;
   minPrice?: number;
   maxPrice?: number;
   isNewArrival?: boolean;
@@ -43,197 +38,103 @@ export interface ProductFilters {
   limit?: number;
 }
 
-// backend data shape
 interface BackendProduct {
   _id: string;
-  sku: string;
   name: string;
-  slug: string;
-  description: string;
-  images: string[];
-  thumbnail: string;
+  images?: string[];
+  thumbnail?: string;
   price: number;
-  mrp: number;
-  currency: string;
+  mrp?: number;
   stockQty: number;
-  isActive: boolean;
-  isNewArrival: boolean;
-  isBestSeller: boolean;
-  tags?: string[];
+  isNewArrival?: boolean;
+  isBestSeller?: boolean;
   createdAt?: string;
 }
 
-// api base url
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8018";
 
-// convert number to rupee format
-const formatPrice = (price: number): string => {
-  return `Rs. ${price.toLocaleString("en-IN", {
+
+const formatPrice = (price: number): string =>
+  `Rs. ${price.toLocaleString("en-IN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
-};
 
-// turn backend data into screen data
-const transformProduct = (backendProduct: BackendProduct): Product => {
-  const priceNumber = Number(backendProduct.price) || 0;
+const transformProduct = (p: BackendProduct): Product => {
+  const priceNumber = Number(p.price) || 0;
 
-  const createdAtMs = backendProduct.createdAt
-    ? new Date(backendProduct.createdAt).getTime()
-    : 0;
-
-  let imageUrl = "/img/placeholder.webp";
-
-  if (backendProduct.thumbnail) {
-    imageUrl = backendProduct.thumbnail;
-  } else if (backendProduct.images && backendProduct.images.length > 0) {
-    imageUrl = backendProduct.images[0];
-  }
+  const image =
+    p.thumbnail ||
+    (p.images && p.images.length > 0 ? p.images[0] : "/img/placeholder.webp");
 
   const product: Product = {
-    id: backendProduct._id,
-    title: backendProduct.name,
+    id: p._id,
+    title: p.name,
     price: formatPrice(priceNumber),
-    image: imageUrl,
+    image,
     priceNumber,
-    createdAtMs,
-    isNewArrival: Boolean(backendProduct.isNewArrival),
-    isBestSeller: Boolean(backendProduct.isBestSeller),
-    stockQty: Number(backendProduct.stockQty) || 0,
+    createdAtMs: p.createdAt ? new Date(p.createdAt).getTime() : 0,
+    isNewArrival: Boolean(p.isNewArrival),
+    isBestSeller: Boolean(p.isBestSeller),
+    stockQty: Number(p.stockQty) || 0,
   };
 
-  // add old price if it exists
-  if (backendProduct.mrp && backendProduct.mrp > priceNumber) {
-    product.oldPrice = formatPrice(backendProduct.mrp);
+  if (p.mrp && p.mrp > priceNumber) {
+    product.oldPrice = formatPrice(p.mrp);
   }
 
-  // add badge for new or best items
-  if (backendProduct.isNewArrival) {
+  if (p.isNewArrival) {
     product.tag = { label: "New Arrival", variant: "primary" };
-  } else if (backendProduct.isBestSeller) {
+  } else if (p.isBestSeller) {
     product.tag = { label: "Best Seller", variant: "secondary" };
   }
 
   return product;
 };
 
-// get products from backend
 export const fetchProducts = async (
   filters: ProductFilters = {}
 ): Promise<ProductListResponse> => {
   const params = new URLSearchParams();
 
-  let resolvedCategoryId = filters.categoryId;
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value === undefined) return;
 
-  // resolve category id from slug
-  if (filters.categorySlug && !filters.categoryId) {
-    const categoryId = await getCategoryIdBySlug(filters.categorySlug);
-
-    if (categoryId) {
-      resolvedCategoryId = categoryId;
+    if (Array.isArray(value)) {
+      params.append(key, value.join(","));
     } else {
-      return {
-        data: [],
-        meta: {
-          totalItems: 0,
-          totalPages: 0,
-          currentPage: 1,
-        },
-      };
+      params.append(key, String(value));
     }
+  });
+
+  // defaults
+  if (!params.has("page")) params.append("page", "1");
+  if (!params.has("limit")) params.append("limit", "20");
+
+  const url = `${API_BASE_URL}/api/v1/products?${params.toString()}`;
+
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch products (${res.status})`);
   }
 
-  // apply filters
-  if (filters.search) {
-    params.append("search", String(filters.search));
-  }
+  const json = await res.json();
 
-  if (resolvedCategoryId) {
-    const ids = Array.isArray(resolvedCategoryId)
-      ? resolvedCategoryId.join(",")
-      : String(resolvedCategoryId);
+  const items: BackendProduct[] = json?.data?.items ?? [];
+  const pagination = json?.data?.pagination;
 
-    params.append("categoryId", ids);
-  }
-
-  if (filters.minPrice !== undefined) {
-    params.append("minPrice", String(filters.minPrice));
-  }
-
-  if (filters.maxPrice !== undefined) {
-    params.append("maxPrice", String(filters.maxPrice));
-  }
-
-  if (filters.isNewArrival !== undefined) {
-    params.append("isNewArrival", String(filters.isNewArrival));
-  }
-
-  if (filters.isBestSeller !== undefined) {
-    params.append("isBestSeller", String(filters.isBestSeller));
-  }
-
-  if (filters.page) {
-    params.append("page", String(filters.page));
-  }
-
-  if (filters.limit) {
-    params.append("limit", String(filters.limit));
-  }
-
-  const queryString = params.toString();
-
-  const url = queryString
-    ? `${API_BASE_URL}/api/v1/products?${queryString}`
-    : `${API_BASE_URL}/api/v1/products`;
-
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch products");
-  }
-
-  const responseData = await response.json();
-
-  let backendProducts: BackendProduct[] = [];
-  let pagination = {
-    page: filters.page || 1,
-    limit: filters.limit || 20,
-    total: 0,
-  };
-
-  // handle different api response shapes
-  if (
-    responseData.data &&
-    responseData.data.items &&
-    Array.isArray(responseData.data.items)
-  ) {
-    backendProducts = responseData.data.items;
-    pagination = responseData.data.pagination || pagination;
-  } else if (responseData.data && Array.isArray(responseData.data)) {
-    backendProducts = responseData.data;
-  } else if (responseData.items && Array.isArray(responseData.items)) {
-    backendProducts = responseData.items;
-    pagination = responseData.pagination || pagination;
-  } else if (Array.isArray(responseData)) {
-    backendProducts = responseData;
-  }
-
-  const products = backendProducts.map(transformProduct);
-
-  const totalItems = pagination.total || products.length;
-
-  const limitValue = pagination.limit || 20;
-
-  const totalPages = Math.ceil(totalItems / limitValue);
-
-  const currentPage = pagination.page || 1;
+  const totalItems = pagination?.total ?? items.length;
+  const limit = pagination?.limit ?? 20;
+  const page = pagination?.page ?? 1;
 
   return {
-    data: products,
+    data: items.map(transformProduct),
     meta: {
       totalItems,
-      totalPages,
-      currentPage,
+      totalPages: Math.ceil(totalItems / limit),
+      currentPage: page,
     },
   };
 };

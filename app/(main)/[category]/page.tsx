@@ -1,11 +1,16 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+import { useParams, notFound } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+
 import CommonButton from "@/app/components/button/CommonButton";
 import CartDrawer from "@/app/components/CartDrawer";
 import CommonHeading from "@/app/components/CommonHeading";
 import CommonProductCard from "@/app/components/CommonProductCard";
 import RangeSlider from "@/app/components/RangeSlider";
 import CommonSelect from "@/app/components/select/CommonSelect";
+
 import {
   Checkbox,
   Dialog,
@@ -15,11 +20,11 @@ import {
   PopoverPanel,
 } from "@headlessui/react";
 import { Check, ChevronDown, Filter } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { useParams, notFound } from "next/navigation";
+
 import { useProductsByCategory } from "@/hooks/use-products";
-import { getCategoryDisplayName } from "@/services/category-service";
+import { getCategoryBySlug } from "@/services/category-service";
 import type { ProductListResponse } from "@/services/product-service";
+
 
 const sortOptions = [
   { label: "Featured", value: "featured" },
@@ -34,58 +39,62 @@ const sortOptions = [
 
 const MAX_PRODUCT_PRICE = 2500;
 
-// allowed category names
-const VALID_CATEGORIES = [
-  "pendant",
-  "necklace",
-  "earring",
-  "bracelet",
-  "jewelry-set",
-  "ring",
-];
+
 
 export default function CategoryProductList() {
-  const params = useParams();
-  const categorySlug = params.category as string;
+  const { category: categorySlug } = useParams<{ category: string }>();
 
-  // check if the category in the url is valid
-  if (!VALID_CATEGORIES.includes(categorySlug.toLowerCase())) {
-    notFound();
-  }
 
-  const categoryTitle = getCategoryDisplayName(categorySlug);
+
+  const { data: category, isLoading: isCategoryLoading } = useQuery({
+    queryKey: ["category", categorySlug],
+    queryFn: () => getCategoryBySlug(categorySlug),
+    enabled: Boolean(categorySlug),
+    staleTime: 1000 * 60 * 10,
+  });
+
+  // If category slug does not exist in backend → 404
+  useEffect(() => {
+    if (!isCategoryLoading && !category) {
+      notFound();
+    }
+  }, [isCategoryLoading, category]);
+
+
 
   const [openCart, setOpenCart] = useState(false);
   const [selected, setSelected] = useState(sortOptions[0]);
 
-  // stock filter state
   const [inStock, setInStock] = useState(false);
   const [outOfStock, setOutOfStock] = useState(false);
 
   const [price, setPrice] = useState<[number, number]>([0, MAX_PRODUCT_PRICE]);
   const [debouncedPrice, setDebouncedPrice] = useState<[number, number]>(price);
+
   const [openMobileFilter, setOpenMobileFilter] = useState(false);
 
-  // delay price update to reduce api calls
+
   useEffect(() => {
     const t = setTimeout(() => setDebouncedPrice(price), 250);
     return () => clearTimeout(t);
   }, [price]);
 
-  // decide stock value to send
+
   const availabilityParam: boolean | undefined = useMemo(() => {
     if (inStock && !outOfStock) return true;
     if (!inStock && outOfStock) return false;
     return undefined;
   }, [inStock, outOfStock]);
 
-  // backend only handles price filter
   const serverFilters = useMemo(
-    () => ({ minPrice: debouncedPrice[0], maxPrice: debouncedPrice[1] }),
+    () => ({
+      minPrice: debouncedPrice[0],
+      maxPrice: debouncedPrice[1],
+    }),
     [debouncedPrice]
   );
 
-  // fetch products for this specific category from the backend
+
   const {
     data,
     isLoading,
@@ -96,17 +105,13 @@ export default function CategoryProductList() {
     isFetchingNextPage,
   } = useProductsByCategory(categorySlug, serverFilters);
 
-  // merge all pages data
   const pages = (data?.pages ?? []) as ProductListResponse[];
-  const sourceProducts = useMemo(
-    () => pages.flatMap((p) => (Array.isArray(p.data) ? p.data : [])),
-    [pages]
-  );
 
-  // total count from backend
+  const sourceProducts = useMemo(() => pages.flatMap((p) => p.data), [pages]);
+
   const totalFromBackend = pages[0]?.meta?.totalItems ?? 0;
 
-  // filter stock on frontend
+
   const availabilityFiltered = useMemo(() => {
     if (availabilityParam === undefined) return sourceProducts;
     return sourceProducts.filter((p) =>
@@ -114,7 +119,6 @@ export default function CategoryProductList() {
     );
   }, [sourceProducts, availabilityParam]);
 
-  // sort products on frontend
   const sortedProducts = useMemo(() => {
     const arr = [...availabilityFiltered];
 
@@ -149,15 +153,8 @@ export default function CategoryProductList() {
     }
   }, [availabilityFiltered, selected.value]);
 
-  // reset all filters
-  const handleClearAll = () => {
-    setPrice([0, MAX_PRODUCT_PRICE]);
-    setSelected(sortOptions[0]);
-    setInStock(false);
-    setOutOfStock(false);
-  };
-
   const selectedAvailabilityCount = (inStock ? 1 : 0) + (outOfStock ? 1 : 0);
+
 
   return (
     <>
@@ -165,11 +162,11 @@ export default function CategoryProductList() {
         <section className="max-w-full px-3 md:px-6 lg:px-10 md:py-6 lg:pt-6">
           <CommonHeading
             level={1}
-            title={categoryTitle}
+            title={category?.title ?? "Products"}
             description="Proudly Supporting Ethical Sourcing - Every Gemstone Has a Story."
           />
 
-          {/* desktop filter bar */}
+          {/* Desktop filters */}
           <div className="mb-10 space-y-6 hidden md:block">
             <div className="flex justify-between gap-4 flex-wrap">
               <div className="flex gap-4 items-center flex-wrap">
@@ -241,7 +238,7 @@ export default function CategoryProductList() {
             </div>
           </div>
 
-          {/* mobile filter bar */}
+          {/* Mobile filter bar */}
           <div className="flex md:hidden justify-between mb-6">
             <button
               onClick={() => setOpenMobileFilter(true)}
@@ -260,7 +257,7 @@ export default function CategoryProductList() {
             />
           </div>
 
-          {/* product grid */}
+          {/* Product grid */}
           <div className="productGrid">
             {isLoading ? (
               <div className="col-span-full py-10 text-center">
@@ -290,7 +287,7 @@ export default function CategoryProductList() {
             )}
           </div>
 
-          {/* load more */}
+          {/* Load more */}
           <div className="flex justify-center mt-8">
             <CommonButton
               variant="secondaryBtn"
@@ -309,7 +306,7 @@ export default function CategoryProductList() {
 
       <CartDrawer open={openCart} onClose={() => setOpenCart(false)} />
 
-      {/* mobile filter dialog */}
+      {/* Mobile filter dialog */}
       <Dialog
         open={openMobileFilter}
         onClose={() => setOpenMobileFilter(false)}
