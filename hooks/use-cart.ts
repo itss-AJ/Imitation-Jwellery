@@ -10,6 +10,7 @@ import {
   type Cart,
 } from "@/services/cart-service";
 
+/* ---------------- BASE CART QUERY ---------------- */
 
 export const useCart = () => {
   return useQuery<Cart, Error>({
@@ -23,18 +24,19 @@ export const useCart = () => {
   });
 };
 
-export const useCartCount = () => {
-  const qc = useQueryClient();
-  const cart = qc.getQueryData<Cart>(["cart"]);
+/* ---------------- DERIVED STATE (REACTIVE) ---------------- */
 
-  return cart?.items?.reduce((sum, item) => sum + (item.quantity ?? 1), 0) ?? 0;
+export const useCartCount = () => {
+  const { data } = useCart();
+  return data?.items.reduce((sum, item) => sum + (item.quantity ?? 1), 0) ?? 0;
 };
 
 export const useCartTotal = () => {
-  const qc = useQueryClient();
-  return qc.getQueryData<Cart>(["cart"])?.total ?? 0;
+  const { data } = useCart();
+  return data?.total ?? 0;
 };
 
+/* ---------------- MUTATIONS ---------------- */
 
 export const useAddToCart = () => {
   const qc = useQueryClient();
@@ -91,7 +93,6 @@ export const useAddToCart = () => {
       if (ctx?.prev) qc.setQueryData<Cart>(["cart"], ctx.prev);
     },
 
-    // 🔑 ALWAYS trust backend after success
     onSuccess: (cart) => {
       qc.setQueryData<Cart>(["cart"], cart);
     },
@@ -101,7 +102,6 @@ export const useAddToCart = () => {
     },
   });
 };
-
 
 export const useRemoveFromCart = () => {
   const qc = useQueryClient();
@@ -186,7 +186,6 @@ export const useUpdateCartQuantity = () => {
     },
   });
 };
-
 
 export const useClearCart = () => {
   const qc = useQueryClient();

@@ -38,26 +38,15 @@ export default function Header() {
   const [openSearch, setOpenSearch] = useState(false);
   const [openSubscribe, setOpenSubscribe] = useState(false);
 
-  const cartCountHook = useCartCount() as unknown;
-  const wishlistCountHook = useWishlistCount() as unknown;
   const { data: userProfile } = useUserProfile();
   const router = useRouter();
   const pathname = usePathname();
 
-  // Safely derive numbers whether hooks return a number or { data: number }
-  const cartCount = useMemo(() => {
-    if (typeof cartCountHook === "number") return cartCountHook;
-    if (isQueryNumber(cartCountHook)) return cartCountHook.data;
-    return 0;
-  }, [cartCountHook]);
-
-  const wishlistCount = useMemo(() => {
-    if (typeof wishlistCountHook === "number") return wishlistCountHook;
-    if (isQueryNumber(wishlistCountHook)) return wishlistCountHook.data;
-    return 0;
-  }, [wishlistCountHook]);
-
   const isAuthenticated = !!userProfile;
+
+  const cartCount = useCartCount();
+  const wishlistCount = useWishlistCount();
+
 
   // Simplified navigation handlers and comments
   const handleMobileLinkClick = () => setMobileMenuOpen(false);
