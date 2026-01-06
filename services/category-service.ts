@@ -1,4 +1,4 @@
-// services/category-service.ts
+import { getDeviceId } from "@/lib/device-storage";
 
 export interface Category {
   id: string;
@@ -22,10 +22,18 @@ interface BackendCategory {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8018";
 
-// in-memory cache
 let categoryCache: Map<string, Category> | null = null;
 let cacheTimestamp = 0;
-const CACHE_TTL = 1000 * 60 * 10; // 10 min
+const CACHE_TTL = 1000 * 60 * 10;
+
+const buildHeaders = (): HeadersInit => {
+  const headers: HeadersInit = {};
+  const deviceId = getDeviceId();
+  if (deviceId && deviceId !== "server") {
+    headers["X-Device-Id"] = deviceId;
+  }
+  return headers;
+};
 
 const transformCategory = (backend: BackendCategory): Category => ({
   id: backend._id,
@@ -37,10 +45,10 @@ const transformCategory = (backend: BackendCategory): Category => ({
   type: backend.type,
 });
 
-// fetch all active categories from backend
 export const fetchCategories = async (): Promise<Category[]> => {
   const res = await fetch(
-    `${API_BASE_URL}/api/v1/product-categories?isActive=true&type=category`
+    `${API_BASE_URL}/api/v1/product-categories?isActive=true&type=category`,
+    { headers: buildHeaders() }
   );
 
   if (!res.ok) {
@@ -53,8 +61,22 @@ export const fetchCategories = async (): Promise<Category[]> => {
   return items.map(transformCategory);
 };
 
+export const fetchCollections = async (): Promise<Category[]> => {
+  const res = await fetch(
+    `${API_BASE_URL}/api/v1/product-collections?isActive=true`,
+    { headers: buildHeaders() }
+  );
 
-// ensure cache exists and is fresh
+  if (!res.ok) {
+    throw new Error(`Failed to fetch collections (${res.status})`);
+  }
+
+  const json = await res.json();
+  const items: BackendCategory[] = json?.data?.items ?? [];
+
+  return items.map(transformCategory);
+};
+
 const ensureCache = async (): Promise<Map<string, Category>> => {
   const now = Date.now();
 
@@ -74,7 +96,6 @@ const ensureCache = async (): Promise<Map<string, Category>> => {
   return map;
 };
 
-// get full category object by slug
 export const getCategoryBySlug = async (
   slug: string
 ): Promise<Category | null> => {
@@ -82,7 +103,6 @@ export const getCategoryBySlug = async (
   return cache.get(slug.toLowerCase()) ?? null;
 };
 
-// get only categoryId (used by product API)
 export const getCategoryIdBySlug = async (
   slug: string
 ): Promise<string | null> => {
@@ -90,7 +110,6 @@ export const getCategoryIdBySlug = async (
   return cat?.id ?? null;
 };
 
-// clear cache (useful after admin updates)
 export const clearCategoryCache = (): void => {
   categoryCache = null;
   cacheTimestamp = 0;

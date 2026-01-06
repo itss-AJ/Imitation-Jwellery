@@ -1,5 +1,4 @@
-// services/product-service.ts
-
+import { getDeviceId } from "@/lib/device-storage";
 
 export interface Product {
   id: string;
@@ -51,9 +50,16 @@ interface BackendProduct {
   createdAt?: string;
 }
 
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8018";
 
+const buildHeaders = (): HeadersInit => {
+  const headers: HeadersInit = {};
+  const deviceId = getDeviceId();
+  if (deviceId && deviceId !== "server") {
+    headers["X-Device-Id"] = deviceId;
+  }
+  return headers;
+};
 
 const formatPrice = (price: number): string =>
   `Rs. ${price.toLocaleString("en-IN", {
@@ -108,13 +114,14 @@ export const fetchProducts = async (
     }
   });
 
-  // defaults
   if (!params.has("page")) params.append("page", "1");
   if (!params.has("limit")) params.append("limit", "20");
 
   const url = `${API_BASE_URL}/api/v1/products?${params.toString()}`;
 
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    headers: buildHeaders(),
+  });
 
   if (!res.ok) {
     throw new Error(`Failed to fetch products (${res.status})`);
@@ -137,4 +144,26 @@ export const fetchProducts = async (
       currentPage: page,
     },
   };
+};
+
+export const fetchNewArrivals = async (
+  limit = 10
+): Promise<Product[]> => {
+  const response = await fetchProducts({ isNewArrival: true, limit });
+  return response.data;
+};
+
+export const fetchBestSellers = async (
+  limit = 10
+): Promise<Product[]> => {
+  const response = await fetchProducts({ isBestSeller: true, limit });
+  return response.data;
+};
+
+export const searchProducts = async (
+  query: string,
+  limit = 20
+): Promise<Product[]> => {
+  const response = await fetchProducts({ search: query, limit });
+  return response.data;
 };

@@ -1,10 +1,11 @@
-// services/product-detail-service.ts
+import { getDeviceId } from "@/lib/device-storage";
+import { formatPrice } from "@/lib/api-utils";
 
-// frontend product detail shape
 export interface ProductDetail {
   id: string;
   title: string;
   price: string;
+  priceNumber: number;
   oldPrice?: string;
   description: string;
   image: string;
@@ -13,13 +14,13 @@ export interface ProductDetail {
   type: string;
   sku: string;
   availability: "Available" | "Out of Stock";
+  stockQty: number;
   tag?: {
     label: string;
     variant: "primary" | "secondary";
   };
 }
 
-// backend product shape
 interface BackendProductDetail {
   _id: string;
   sku: string;
@@ -39,12 +40,17 @@ interface BackendProductDetail {
   tags?: string[];
 }
 
-// api base url
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8018";
 
-import { formatPrice } from "@/lib/api-utils";
+const buildHeaders = (): HeadersInit => {
+  const headers: HeadersInit = {};
+  const deviceId = getDeviceId();
+  if (deviceId && deviceId !== "server") {
+    headers["X-Device-Id"] = deviceId;
+  }
+  return headers;
+};
 
-// convert backend product to frontend product
 const transformProductDetail = (
   backendProduct: BackendProductDetail
 ): ProductDetail => {
@@ -52,6 +58,7 @@ const transformProductDetail = (
     id: backendProduct._id,
     title: backendProduct.name,
     price: formatPrice(backendProduct.price),
+    priceNumber: backendProduct.price,
     description: backendProduct.description || "",
     image:
       backendProduct.thumbnail ||
@@ -65,14 +72,13 @@ const transformProductDetail = (
     type: "Jewelry",
     sku: backendProduct.sku || "",
     availability: backendProduct.stockQty > 0 ? "Available" : "Out of Stock",
+    stockQty: backendProduct.stockQty || 0,
   };
 
-  // show old price if mrp is higher
   if (backendProduct.mrp && backendProduct.mrp > backendProduct.price) {
     product.oldPrice = formatPrice(backendProduct.mrp);
   }
 
-  // show tag on product card
   if (backendProduct.isNewArrival) {
     product.tag = { label: "New Arrival", variant: "primary" };
   } else if (backendProduct.isBestSeller) {
@@ -82,16 +88,18 @@ const transformProductDetail = (
   return product;
 };
 
-// fetch single product details
 export const fetchProductDetail = async (
   productId: string
 ): Promise<ProductDetail> => {
   if (!productId || productId === "undefined") {
     throw new Error("Invalid product id");
   }
+  
   const url = `${API_BASE_URL}/api/v1/products/${productId}`;
 
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: buildHeaders(),
+  });
 
   if (!response.ok) {
     throw new Error("Failed to fetch product details");
@@ -101,7 +109,6 @@ export const fetchProductDetail = async (
 
   let backendProduct: BackendProductDetail | null = null;
 
-  // handle different api response shapes
   if (responseData.data?.product) {
     backendProduct = responseData.data.product;
   } else if (responseData.data && responseData.data._id) {

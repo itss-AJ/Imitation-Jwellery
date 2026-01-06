@@ -15,7 +15,7 @@ import SubscribePopup from "./SubscribePopup";
 import SearchPopup from "./SearchPopup";
 import { useCartCount } from "@/hooks/use-cart";
 import { useWishlistCount } from "@/hooks/use-wishlist";
-import { useUserProfile } from "@/hooks/use-auth";
+import { useUserProfile, useLogout } from "@/hooks/use-auth";
 import { usePathname, useRouter } from "next/navigation";
 
 /**
@@ -39,10 +39,11 @@ export default function Header() {
   const [openSubscribe, setOpenSubscribe] = useState(false);
 
   const { data: userProfile } = useUserProfile();
+  const logoutMutation = useLogout();
   const router = useRouter();
   const pathname = usePathname();
 
-  const isAuthenticated = !!userProfile;
+  const isAuthenticated = !!userProfile && !!userProfile._id && userProfile._id !== "guest";
 
   const cartCount = useCartCount();
   const wishlistCount = useWishlistCount();
@@ -62,18 +63,10 @@ export default function Header() {
     setMobileMenuOpen(false);
   }, [router, pathname]);
 
-  const onSignOutClick = useCallback(async () => {
-    // log user out and refresh the page
-    try {
-      await fetch("/api/auth/sign-out", { method: "POST" });
-    } catch {
-      // ignore errors
-    } finally {
-      setMobileMenuOpen(false);
-      router.refresh();
-      router.push("/");
-    }
-  }, [router]);
+  const onSignOutClick = useCallback(() => {
+    setMobileMenuOpen(false);
+    logoutMutation.mutate();
+  }, [logoutMutation]);
 
   return (
     <>

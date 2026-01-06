@@ -1,6 +1,5 @@
-// services/address-service.ts
+import { getDeviceId } from "@/lib/device-storage";
 
-// Types matching your backend
 export interface Address {
   _id: string;
   customerId: string;
@@ -22,13 +21,10 @@ export interface Customer {
   fullName: string;
   email?: string;
   mobile: string;
-  // ...add others as needed
 }
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8018/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8018";
 
-// Matches backend model (without non-creatable fields)
 interface AddressPayload {
   label?: string;
   fullName?: string;
@@ -41,44 +37,64 @@ interface AddressPayload {
   isDefault?: boolean;
 }
 
-// How you get current customer profile—must return `Customer` (with `_id`)
-const fetchUserProfile = async (): Promise<Customer> => {
-  const res = await fetch(`${API_BASE_URL}/customers/me`, {
+const buildHeaders = (): HeadersInit => {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+  const deviceId = getDeviceId();
+  if (deviceId && deviceId !== "server") {
+    headers["X-Device-Id"] = deviceId;
+  }
+  return headers;
+};
+
+const fetchUserProfile = async (): Promise<Customer | null> => {
+  const res = await fetch(`${API_BASE_URL}/api/v1/customers/me`, {
     credentials: "include",
+    headers: buildHeaders(),
   });
-  if (!res.ok) throw new Error("Failed to fetch user profile");
+  if (!res.ok) return null;
   const data = await res.json();
-  return data.customer as Customer;
+  return (data?.data?.customer ?? data?.customer ?? null) as Customer | null;
 };
 
 const getCurrentCustomerId = async (): Promise<string> => {
   const me = await fetchUserProfile();
-  if (!me?._id || me._id === "guest")
+  if (!me?._id || me._id === "guest") {
     throw new Error("Please sign in to manage addresses");
+  }
   return me._id;
 };
 
-// Show detailed errors for UI
 const getApiError = async (
   response: Response,
   fallback = "Request failed"
 ): Promise<never> => {
+  let message = fallback;
   try {
     const d = await response.json();
-    throw new Error(d?.message || d?.error || fallback);
+    message = d?.message || d?.error || fallback;
   } catch {
-    throw new Error(fallback);
+    // use fallback
   }
+  throw new Error(message);
 };
 
 // ===== READ (List all addresses) =====
 export const fetchAddresses = async (): Promise<Address[]> => {
   const customerId = await getCurrentCustomerId();
-  const url = `${API_BASE_URL}/customers/${customerId}/addresses`;
-  const response = await fetch(url, { method: "GET", credentials: "include" });
+  const url = `${API_BASE_URL}/api/v1/customers/${customerId}/addresses`;
+  
+  const response = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+    headers: buildHeaders(),
+  });
+  
   if (!response.ok) return getApiError(response, "Failed to fetch addresses");
-  const data: { items: Address[] } = await response.json();
-  return data.items || [];
+  
+  const data = await response.json();
+  return data?.data?.items ?? data?.items ?? [];
 };
 
 // ===== CREATE =====
@@ -97,6 +113,7 @@ export const addAddress = async (
     country,
     isDefault,
   } = addressData;
+  
   const body: AddressPayload = {
     label,
     fullName,
@@ -109,18 +126,19 @@ export const addAddress = async (
     isDefault,
   };
 
-  const url = `${API_BASE_URL}/customers/${customerId}/addresses`;
+  const url = `${API_BASE_URL}/api/v1/customers/${customerId}/addresses`;
+  
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: buildHeaders(),
     credentials: "include",
     body: JSON.stringify(body),
   });
 
   if (!response.ok) return getApiError(response, "Failed to add address");
 
-  const data: { address: Address } = await response.json();
-  return data.address;
+  const data = await response.json();
+  return data?.data?.address ?? data?.address;
 };
 
 // ===== UPDATE =====
@@ -131,19 +149,20 @@ export const updateAddress = async (
   >
 ): Promise<Address> => {
   const customerId = await getCurrentCustomerId();
-  const url = `${API_BASE_URL}/customers/${customerId}/addresses/${addressId}`;
+  const url = `${API_BASE_URL}/api/v1/customers/${customerId}/addresses/${addressId}`;
   const body: AddressPayload = { ...addressData };
 
   const response = await fetch(url, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: buildHeaders(),
     credentials: "include",
     body: JSON.stringify(body),
   });
 
   if (!response.ok) return getApiError(response, "Failed to update address");
-  const data: { address: Address } = await response.json();
-  return data.address;
+  
+  const data = await response.json();
+  return data?.data?.address ?? data?.address;
 };
 
 // ===== DELETE =====
@@ -151,11 +170,14 @@ export const deleteAddress = async (
   addressId: string
 ): Promise<{ success: boolean }> => {
   const customerId = await getCurrentCustomerId();
-  const url = `${API_BASE_URL}/customers/${customerId}/addresses/${addressId}`;
+  const url = `${API_BASE_URL}/api/v1/customers/${customerId}/addresses/${addressId}`;
+  
   const response = await fetch(url, {
     method: "DELETE",
     credentials: "include",
+    headers: buildHeaders(),
   });
+  
   if (!response.ok) return getApiError(response, "Failed to delete address");
   return { success: true };
 };

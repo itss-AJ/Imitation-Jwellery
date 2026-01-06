@@ -1,65 +1,29 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { X, Search } from "lucide-react";
+import { X, Search, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import CommonInput from "./input/CommonInput";
+import { useSearchState } from "@/hooks/use-search";
 
 type SearchPopupProps = {
   open: boolean;
   onClose: () => void;
 };
 
-type Product = {
-  id: string;
-  title: string;
-  price: string;
-  image: string;
-};
-
-const SEARCH_PRODUCTS: Product[] = [
-  {
-    id: "69562cc62c9e2fba8807ad1b",
-    title: "Gold Plated Large Oval Shape Hoop Earring",
-    price: "₹199",
-    image: "/img/bracelet-img.webp",
-  },
-  {
-    id: "69562cc62c9e2fba8807ad18",
-    title: "Korean Pearl Drop Earring",
-    price: "₹399",
-    image: "/img/earring.webp",
-  },
-  {
-    id: "69562cc62c9e2fba8807ad22",
-    title: "Big Golden Rectangular Pendant",
-    price: "₹499",
-    image: "/img/pendant_old.webp",
-  },
-  {
-    id: "69562cc62c9e2fba8807ad23",
-    title: "Diamond Studded Bell Shape Pendant",
-    price: "₹499",
-    image: "/img/jewelrySet.webp",
-  },
-];
-
 export default function SearchPopup({ open, onClose }: SearchPopupProps) {
-  const [query, setQuery] = useState("");
+  const { query, setQuery, results, isLoading, hasResults } = useSearchState();
 
-  const filteredProducts = useMemo(() => {
-    if (!query.trim()) return SEARCH_PRODUCTS;
-    return SEARCH_PRODUCTS.filter((product) =>
-      product.title.toLowerCase().includes(query.toLowerCase())
-    );
-  }, [query]);
+  const handleClose = () => {
+    setQuery("");
+    onClose();
+  };
 
   return (
     <Transition appear show={open} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
-        {/* BACKDROP */}
+      <Dialog as="div" className="relative z-50" onClose={handleClose}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -72,10 +36,8 @@ export default function SearchPopup({ open, onClose }: SearchPopupProps) {
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
         </Transition.Child>
 
-        {/* CONTAINER */}
         <div className="fixed inset-0 overflow-hidden">
           <div className="flex h-full items-end sm:items-center justify-center">
-            {/* PANEL */}
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
@@ -86,31 +48,28 @@ export default function SearchPopup({ open, onClose }: SearchPopupProps) {
               leaveTo="opacity-0 translate-y-full sm:translate-y-6 sm:scale-95"
             >
               <Dialog.Panel className="w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl p-3 md:p-6 relative">
-                {/* CLOSE */}
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   aria-label="Close search popup"
                   className="absolute right-4 top-4 p-2 rounded-full hover:bg-foreground/10"
                 >
                   <X size={18} />
                 </button>
 
-                {/* DRAG INDICATOR (Mobile) */}
                 <div className="sm:hidden w-12 h-1 rounded-full mx-auto mb-4" />
 
-                {/* TITLE */}
                 <Dialog.Title className="text-lg font-medium mb-4">
                   Search Products
                 </Dialog.Title>
 
-                {/* SEARCH INPUT */}
                 <div className="relative mb-6">
-                  <Link href="/product-list" onClick={onClose}>
-                    <Search
-                      size={18}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/60 cursor-pointer z-1"
-                    />
-                  </Link>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/60">
+                    {isLoading ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <Search size={18} />
+                    )}
+                  </div>
                   <CommonInput
                     placeholder="Search for jewellery..."
                     value={query}
@@ -120,31 +79,41 @@ export default function SearchPopup({ open, onClose }: SearchPopupProps) {
                   />
                 </div>
 
-                {/* RESULTS */}
                 <div className="space-y-4 max-h-[50vh] overflow-y-auto">
-                  {filteredProducts.length === 0 ? (
-                    <p className="text-sm text-foreground/60">
-                      No products found
+                  {query.length < 2 ? (
+                    <p className="text-sm text-foreground/60 text-center py-4">
+                      Type at least 2 characters to search
                     </p>
+                  ) : isLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="animate-spin text-brand" size={24} />
+                    </div>
+                  ) : !hasResults ? (
+                    <div className="text-center py-8">
+                      <p className="text-foreground/60 mb-2">No products found</p>
+                      <p className="text-sm text-foreground/40">
+                        Try a different search term
+                      </p>
+                    </div>
                   ) : (
-                    filteredProducts.map((product) => (
+                    results.map((product) => (
                       <Link
                         key={product.id}
                         href={`/product-details/${product.id}`}
-                        onClick={onClose}
-                        className="flex gap-4 items-center"
+                        onClick={handleClose}
+                        className="flex gap-4 items-center hover:bg-foreground/5 p-2 rounded-lg transition"
                       >
-                        <div className="relative w-14 h-14 rounded-md overflow-hidden bg-foreground/10">
+                        <div className="relative w-14 h-14 rounded-md overflow-hidden bg-foreground/10 flex-shrink-0">
                           <Image
-                            src={product.image || "/placeholder.svg"}
+                            src={product.image || "/img/placeholder.webp"}
                             alt={product.title}
                             fill
                             className="object-cover"
                           />
                         </div>
 
-                        <div>
-                          <p className="text-sm font-times font-medium">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-times font-medium truncate">
                             {product.title}
                           </p>
                           <p className="text-sm text-foreground/70">
@@ -155,6 +124,18 @@ export default function SearchPopup({ open, onClose }: SearchPopupProps) {
                     ))
                   )}
                 </div>
+
+                {hasResults && query.length >= 2 && (
+                  <div className="mt-4 pt-4 border-t">
+                    <Link
+                      href={`/product-list?search=${encodeURIComponent(query)}`}
+                      onClick={handleClose}
+                      className="text-sm text-brand underline block text-center"
+                    >
+                      View all results for &quot;{query}&quot;
+                    </Link>
+                  </div>
+                )}
               </Dialog.Panel>
             </Transition.Child>
           </div>

@@ -2,49 +2,28 @@
 
 import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { X, Search } from "lucide-react";
+import { X, Search, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import CommonInput from "./input/CommonInput";
+import { useSearchState } from "@/hooks/use-search";
 
 type SearchDrawerProps = {
   open: boolean;
   onClose: () => void;
 };
 
-const SEARCH_PRODUCTS = [
-  {
-    id: "69562cc62c9e2fba8807ad1f", // Updated mock IDs to real MongoDB ObjectIDs
-    title: "Gold Plated Large Oval Shape Hoop Earring",
-    price: "Rs. 199.00",
-    oldPrice: "Rs. 249.00",
-    image: "/img/bracelet-img.webp",
-  },
-  {
-    id: "69562cc62c9e2fba8807ad24", // Updated mock IDs to real MongoDB ObjectIDs
-    title: "Korean Pearl Drop Earring",
-    price: "Rs. 399.00",
-    image: "/img/earring.webp",
-  },
-  {
-    id: "69562cc62c9e2fba8807ad19", // Updated mock IDs to real MongoDB ObjectIDs
-    title: "Big Golden Rectangular Pendant",
-    price: "Rs. 499.00",
-    image: "/img/pendant_old.webp",
-  },
-  {
-    id: "69562cc62c9e2fba8807ad17", // Updated mock IDs to real MongoDB ObjectIDs
-    title: "Diamond Studded Bell Shape Pendant",
-    price: "Rs. 499.00",
-    image: "/img/jewelrySet.webp",
-  },
-];
-
 export default function SearchDrawer({ open, onClose }: SearchDrawerProps) {
+  const { query, setQuery, results, isLoading, hasResults } = useSearchState();
+
+  const handleClose = () => {
+    setQuery("");
+    onClose();
+  };
+
   return (
     <Transition appear show={open} as={Fragment}>
-      <Dialog as="div" className="relative z-100" onClose={onClose}>
-        {/* OVERLAY */}
+      <Dialog as="div" className="relative z-100" onClose={handleClose}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -57,7 +36,6 @@ export default function SearchDrawer({ open, onClose }: SearchDrawerProps) {
           <div className="fixed inset-0 bg-black/40" />
         </Transition.Child>
 
-        {/* DRAWER */}
         <div className="fixed inset-0 overflow-hidden">
           <Transition.Child
             as={Fragment}
@@ -69,13 +47,12 @@ export default function SearchDrawer({ open, onClose }: SearchDrawerProps) {
             leaveTo="-translate-x-full"
           >
             <Dialog.Panel className="relative h-full w-full max-w-sm bg-[#fce9ca] p-3 md:p-6 overflow-y-auto">
-              {/* HEADER */}
               <div className="flex items-center justify-between mb-6">
                 <p className="text-xs tracking-widest uppercase text-foreground">
                   Find your perfect pick
                 </p>
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   aria-label="Close search drawer"
                   className="p-2 rounded-full hover:bg-foreground/10"
                 >
@@ -83,63 +60,80 @@ export default function SearchDrawer({ open, onClose }: SearchDrawerProps) {
                 </button>
               </div>
 
-              {/* SEARCH INPUT */}
               <div className="relative mb-6">
-                <Search
-                  size={18}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/60"
-                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/60">
+                  {isLoading ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <Search size={18} />
+                  )}
+                </div>
                 <CommonInput
                   name="search"
                   type="text"
                   iconInput
                   noMargin
                   placeholder="Search Products..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
                 />
               </div>
 
-              {/* PRODUCTS */}
               <div>
                 <p className="mb-4 text-xs tracking-widest uppercase text-foreground/60">
-                  Products
+                  {query.length >= 2 ? "Search Results" : "Popular Products"}
                 </p>
 
-                <div className="space-y-5">
-                  {SEARCH_PRODUCTS.map((product) => (
-                    <Link
-                      href={`/product-details/${product.id}`}
-                      key={product.id}
-                      onClick={onClose}
-                      className="flex gap-4 items-start"
-                    >
-                      <div className="relative w-16 min-w-16 h-16 rounded-md overflow-hidden bg-foreground/10">
-                        <Image
-                          src={product.image || "/placeholder.svg"}
-                          alt={product.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
+                {query.length >= 2 && isLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="animate-spin text-brand" size={24} />
+                  </div>
+                ) : query.length >= 2 && !hasResults ? (
+                  <p className="text-sm text-foreground/60 text-center py-4">
+                    No products found for &quot;{query}&quot;
+                  </p>
+                ) : (
+                  <div className="space-y-5">
+                    {results.map((product) => (
+                      <Link
+                        href={`/product-details/${product.id}`}
+                        key={product.id}
+                        onClick={handleClose}
+                        className="flex gap-4 items-start hover:bg-foreground/5 p-2 rounded-lg transition"
+                      >
+                        <div className="relative w-16 min-w-16 h-16 rounded-md overflow-hidden bg-foreground/10">
+                          <Image
+                            src={product.image || "/img/placeholder.webp"}
+                            alt={product.title}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
 
-                      <div>
-                        <p className="text-sm font-times font-medium leading-snug mb-1">
-                          {product.title}
-                        </p>
-
-                        <div className="flex items-center gap-2 text-sm">
+                        <div>
+                          <p className="text-sm font-times font-medium leading-snug mb-1">
+                            {product.title}
+                          </p>
                           <span className="font-medium text-sm">
                             {product.price}
                           </span>
-                          {product.oldPrice && (
-                            <span className="text-foreground/50 line-through">
-                              {product.oldPrice}
-                            </span>
-                          )}
                         </div>
-                      </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
+                {hasResults && query.length >= 2 && (
+                  <div className="mt-6 pt-4 border-t border-foreground/20">
+                    <Link
+                      href={`/product-list?search=${encodeURIComponent(query)}`}
+                      onClick={handleClose}
+                      className="text-sm text-brand underline block text-center"
+                    >
+                      View all results
                     </Link>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             </Dialog.Panel>
           </Transition.Child>

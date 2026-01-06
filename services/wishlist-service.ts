@@ -1,5 +1,3 @@
-// src/services/wishlist-service.ts
-
 import { getDeviceId, getLocal, setLocal } from "@/lib/device-storage";
 
 export type WishlistItem = {
@@ -21,30 +19,78 @@ export type ProductLike = {
   image: string;
 };
 
-// device based storage key
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8018";
+
 const storageKey = () => `wishlist:${getDeviceId()}`;
 
-// read wishlist
+const buildHeaders = (): HeadersInit => {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+  const deviceId = getDeviceId();
+  if (deviceId && deviceId !== "server") {
+    headers["X-Device-Id"] = deviceId;
+  }
+  return headers;
+};
+
 const getLocalWishlist = (): Wishlist => {
   return getLocal<Wishlist>(storageKey(), { items: [] });
 };
 
-// save wishlist
 const saveLocalWishlist = (wishlist: Wishlist): void => {
   setLocal(storageKey(), wishlist);
 };
 
-// get wishlist
+// Get wishlist - try backend first, fallback to local
 export const getWishlist = async (): Promise<Wishlist> => {
-  return getLocalWishlist();
+  const deviceId = getDeviceId();
+
+  if (!deviceId || deviceId === "server") {
+    return getLocalWishlist();
+  }
+
+  try {
+    const url = `${API_BASE_URL}/api/v1/wishlist`;
+    const response = await fetch(url, {
+      credentials: "include",
+      headers: buildHeaders(),
+    });
+
+    if (!response.ok) {
+      return getLocalWishlist();
+    }
+
+    const data = await response.json();
+    const backendWishlist = data?.data?.wishlist ?? data?.data ?? data?.wishlist;
+
+    if (backendWishlist?.items && Array.isArray(backendWishlist.items)) {
+      const wishlist: Wishlist = {
+        items: backendWishlist.items.map(
+          (item: { _id?: string; productId?: string; product?: { _id: string; name: string; price: number; thumbnail?: string } }) => ({
+            id: item._id || item.productId || "",
+            productId: item.product?._id || item.productId || "",
+            title: item.product?.name || "",
+            price: item.product?.price ? `Rs. ${item.product.price}` : "",
+            image: item.product?.thumbnail || "/img/placeholder.webp",
+          })
+        ),
+      };
+      saveLocalWishlist(wishlist);
+      return wishlist;
+    }
+
+    return getLocalWishlist();
+  } catch {
+    return getLocalWishlist();
+  }
 };
 
-// add to wishlist
+// Add to wishlist
 export const addWishlistItem = async (
   product: ProductLike
 ): Promise<Wishlist> => {
   const wishlist = getLocalWishlist();
-
   const exists = wishlist.items.some((i) => i.productId === product.productId);
 
   if (!exists) {
@@ -55,14 +101,29 @@ export const addWishlistItem = async (
       price: product.price,
       image: product.image,
     });
-
     saveLocalWishlist(wishlist);
+  }
+
+  // Try to sync with backend
+  const deviceId = getDeviceId();
+  if (deviceId && deviceId !== "server") {
+    try {
+      const url = `${API_BASE_URL}/api/v1/wishlist/items`;
+      await fetch(url, {
+        method: "POST",
+        headers: buildHeaders(),
+        credentials: "include",
+        body: JSON.stringify({ productId: product.productId }),
+      });
+    } catch {
+      // Ignore backend errors, local storage is source of truth
+    }
   }
 
   return wishlist;
 };
 
-// remove from wishlist
+// Remove from wishlist
 export const removeWishlistItem = async (
   wishlistItemId: string
 ): Promise<Wishlist> => {
@@ -74,12 +135,43 @@ export const removeWishlistItem = async (
 
   saveLocalWishlist(wishlist);
 
+  // Try to sync with backend
+  const deviceId = getDeviceId();
+  if (deviceId && deviceId !== "server") {
+    try {
+      const url = `${API_BASE_URL}/api/v1/wishlist/items/${wishlistItemId}`;
+      await fetch(url, {
+        method: "DELETE",
+        headers: buildHeaders(),
+        credentials: "include",
+      });
+    } catch {
+      // Ignore backend errors
+    }
+  }
+
   return wishlist;
 };
 
-// clear wishlist
+// Clear wishlist
 export const clearWishlist = async (): Promise<Wishlist> => {
   const empty: Wishlist = { items: [] };
   saveLocalWishlist(empty);
+
+  // Try to sync with backend
+  const deviceId = getDeviceId();
+  if (deviceId && deviceId !== "server") {
+    try {
+      const url = `${API_BASE_URL}/api/v1/wishlist`;
+      await fetch(url, {
+        method: "DELETE",
+        headers: buildHeaders(),
+        credentials: "include",
+      });
+    } catch {
+      // Ignore backend errors
+    }
+  }
+
   return empty;
 };

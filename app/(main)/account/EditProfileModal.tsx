@@ -1,27 +1,42 @@
 "use client";
 
 import type React from "react";
-import { Fragment, useState, useEffect, useMemo } from "react";
+import { Fragment, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { X } from "lucide-react";
+import { X, AlertCircle } from "lucide-react";
 import CommonInput from "@/app/components/input/CommonInput";
 import CommonButton from "@/app/components/button/CommonButton";
 import { useUpdateProfile, useUserProfile } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 type EditProfileModalProps = {
   open: boolean;
   onClose: () => void;
 };
 
+type ValidationErrors = Partial<{
+  firstName: string;
+  lastName: string;
+  email: string;
+  mobile: string;
+}>;
+
+type FormData = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  mobile: string;
+};
+
 export default function EditProfileModal({
   open,
   onClose,
 }: EditProfileModalProps) {
+  const { toast } = useToast();
   const { data: userProfile } = useUserProfile();
   const updateProfile = useUpdateProfile();
 
-  // Compute the default form data when userProfile changes
-  const defaultFormData = useMemo(() => {
+  const getInitialFormData = (): FormData => {
     if (!userProfile) {
       return { firstName: "", lastName: "", email: "", mobile: "" };
     }
@@ -34,36 +49,87 @@ export default function EditProfileModal({
       email: userProfile.email || "",
       mobile: userProfile.mobile || "",
     };
-  }, [userProfile]);
+  };
 
-  // Keep form state in sync ONLY when opening, or when userProfile changes
-  const [formData, setFormData] = useState(defaultFormData);
-  useEffect(() => {
-    if (open) {
-      setFormData(defaultFormData);
+  const [formData, setFormData] = useState<FormData>(getInitialFormData);
+  const [errors, setErrors] = useState<ValidationErrors>({});
+
+  // This prevents useEffect from calling setState synchronously
+  const modalKey = open ? "open" : "closed";
+
+  const validateForm = (): boolean => {
+    const newErrors: ValidationErrors = {};
+
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = "First name is required";
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, defaultFormData]);
+
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = "Last name is required";
+    }
+
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email";
+    }
+
+    if (
+      formData.mobile &&
+      !/^\d{10}$/.test(formData.mobile.replace(/\D/g, ""))
+    ) {
+      newErrors.mobile = "Please enter a valid 10-digit mobile number";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name as keyof ValidationErrors]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name as keyof ValidationErrors];
+        return newErrors;
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfile.mutate({
-      fullName: `${formData.firstName} ${formData.lastName}`.trim(),
-      email: formData.email,
-      mobile: formData.mobile,
-    });
-    onClose();
+    if (!validateForm()) return;
+
+    updateProfile.mutate(
+      {
+        fullName: `${formData.firstName} ${formData.lastName}`.trim(),
+        email: formData.email,
+        mobile: formData.mobile,
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Profile updated",
+            description: "Your profile has been updated successfully.",
+          });
+          onClose();
+        },
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to update profile. Please try again.",
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
 
   return (
-    <Transition appear show={open} as={Fragment}>
+    <Transition appear show={open} as={Fragment} key={modalKey}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
-        {/* BACKDROP */}
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -76,7 +142,6 @@ export default function EditProfileModal({
           <div className="fixed inset-0 bg-black/40" />
         </Transition.Child>
 
-        {/* MODAL */}
         <div className="fixed inset-0 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center px-4 py-10">
             <Transition.Child
@@ -88,14 +153,7 @@ export default function EditProfileModal({
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel
-                // The key here will remount form if userProfile or modal intent changes
-                key={`${open}-${userProfile?.fullName ?? ""}-${
-                  userProfile?.email ?? ""
-                }-${userProfile?.mobile ?? ""}`}
-                className="w-full max-w-xl rounded-2xl bg-background p-6"
-              >
-                {/* HEADER */}
+              <Dialog.Panel className="w-full max-w-xl rounded-2xl bg-background p-6">
                 <div className="flex items-center justify-between mb-6">
                   <Dialog.Title className="text-lg font-medium">
                     Edit profile
@@ -106,14 +164,22 @@ export default function EditProfileModal({
                     className="p-2 rounded-full hover:bg-foreground/10"
                     aria-label="Close modal"
                     title="Close"
+                    disabled={updateProfile.isPending}
                   >
                     <X size={18} />
                   </button>
                 </div>
 
-                {/* FORM */}
+                {Object.keys(errors).length > 0 && (
+                  <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                    <p className="text-sm text-red-700">
+                      Please fix the errors below
+                    </p>
+                  </div>
+                )}
+
                 <form onSubmit={handleSubmit}>
-                  {/* FIRST & LAST NAME */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <CommonInput
                       label="First name"
@@ -121,6 +187,8 @@ export default function EditProfileModal({
                       placeholder="First name"
                       value={formData.firstName}
                       onChange={handleInputChange}
+                      disabled={updateProfile.isPending}
+                      error={errors.firstName}
                       required
                     />
                     <CommonInput
@@ -129,35 +197,40 @@ export default function EditProfileModal({
                       placeholder="Last name"
                       value={formData.lastName}
                       onChange={handleInputChange}
+                      disabled={updateProfile.isPending}
+                      error={errors.lastName}
                       required
                     />
                   </div>
 
-                  {/* EMAIL */}
                   <CommonInput
                     label="Email"
                     name="email"
                     type="email"
                     value={formData.email}
                     onChange={handleInputChange}
+                    disabled={updateProfile.isPending}
+                    error={errors.email}
                   />
 
-                  {/* MOBILE */}
                   <CommonInput
                     label="Mobile"
                     name="mobile"
                     type="tel"
+                    inputMode="numeric"
                     value={formData.mobile}
                     onChange={handleInputChange}
+                    disabled={updateProfile.isPending}
+                    error={errors.mobile}
                   />
 
-                  {/* FOOTER ACTIONS */}
                   <div className="pt-4 flex items-center justify-end gap-3">
                     <CommonButton
                       type="button"
                       variant="secondaryBtn"
                       onClick={onClose}
                       className="w-fit max-w-fit px-6"
+                      disabled={updateProfile.isPending}
                     >
                       Cancel
                     </CommonButton>

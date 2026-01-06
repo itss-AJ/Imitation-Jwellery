@@ -1,7 +1,9 @@
 "use client";
 
+import type React from "react";
+
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, AlertCircle } from "lucide-react";
 
 type CommonInputProps = {
   label?: string;
@@ -16,6 +18,15 @@ type CommonInputProps = {
   className?: string;
   iconInput?: boolean;
   noMargin?: boolean;
+  error?: string;
+  inputMode?:
+    | "text"
+    | "email"
+    | "tel"
+    | "url"
+    | "numeric"
+    | "decimal"
+    | "search";
 };
 
 const CommonInput: React.FC<CommonInputProps> = ({
@@ -31,9 +42,12 @@ const CommonInput: React.FC<CommonInputProps> = ({
   className = "",
   iconInput = false,
   noMargin = false,
+  error,
+  inputMode,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
+  const hasError = !!error;
 
   return (
     <div className={`${noMargin ? "" : "mb-5"} w-full`}>
@@ -58,17 +72,22 @@ const CommonInput: React.FC<CommonInputProps> = ({
           onChange={onChange}
           disabled={disabled}
           required={required}
+          inputMode={inputMode}
           className={`
-            w-full rounded-md border border-gray-300 px-4 py-3 text-sm
-            outline-none transition focus:border-primary focus:ring-1 focus:ring-primary
+            w-full rounded-md border px-4 py-3 text-sm
+            outline-none transition focus:ring-1
             disabled:bg-gray-100 disabled:cursor-not-allowed
-            ${(iconInput || isPassword) ? "pr-12" : ""}
+            ${
+              hasError
+                ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                : "border-gray-300 focus:border-primary focus:ring-primary"
+            }
+            ${iconInput || isPassword ? "pr-12" : ""}
             ${type === "number" ? "no-spinner" : ""}
             ${className}
           `}
         />
 
-        {/* Eye Icon */}
         {isPassword && (
           <button
             type="button"
@@ -78,7 +97,13 @@ const CommonInput: React.FC<CommonInputProps> = ({
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         )}
+
+        {hasError && !isPassword && (
+          <AlertCircle className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-red-500" />
+        )}
       </div>
+
+      {hasError && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
   );
 };
